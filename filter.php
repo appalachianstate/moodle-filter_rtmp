@@ -122,7 +122,7 @@ class filter_rtmp extends moodle_text_filter
                 // of the substituted (and cached) content
                 $newtext .= "\n"
                          . html_writer::script("M.yui.add_module({ filter_rtmp: { name: 'filter_rtmp', fullpath: '{$CFG->wwwroot}/filter/rtmp/module.js', requires: ['node'] }});\n"
-                         .                     "YUI().use('node', function(Y) { Y.on('domready', function() { Y.use('filter_rtmp', function(Y) { M.filter_rtmp.init(Y); }); }); });");
+                         .                     "YUI(M.yui.loader).use('node', function(Y) { Y.on('domready', function() { Y.use('filter_rtmp', function(Y) { M.filter_rtmp.init(Y); }); }); });");
             }
 
         }
