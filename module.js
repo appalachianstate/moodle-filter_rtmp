@@ -30,10 +30,11 @@ M.filter_rtmp = {
     Y: null, transaction: [],
 
     _js_flowplayer   : M.cfg.wwwroot + filter_rtmp_flowplayer_js,
-    _swf_cfg_base    : M.cfg.wwwroot + filter_rtmp_flowplayer_swf,
-    _swf_cfg_rtmp    : M.cfg.wwwroot + filter_rtmp_flowplayer_rtmp,
-    _swf_cfg_caption : M.cfg.wwwroot + filter_rtmp_flowplayer_caption,
-    _swf_cfg_content : M.cfg.wwwroot + filter_rtmp_flowplayer_content,
+    _swf_cfg_play    : M.cfg.wwwroot + filter_rtmp_flowplayer_playswf,
+    _swf_cfg_ctrl    : M.cfg.wwwroot + filter_rtmp_flowplayer_ctrlswf,
+    _swf_cfg_rtmp    : M.cfg.wwwroot + '/filter/rtmp/flowplayer.rtmp.swf.php',
+    _swf_cfg_caption : M.cfg.wwwroot + '/filter/rtmp/flowplayer.captions.swf.php',
+    _swf_cfg_content : M.cfg.wwwroot + '/filter/rtmp/flowplayer.content.swf.php',
     _min_video_width : 240,
     _default_volume  : 80,
 
@@ -58,7 +59,7 @@ M.filter_rtmp = {
         if (typeof(useCaptions) == 'undefined') { useCaptions = false; }
         else { useCaptions = (isNaN(useCaptions) ? false : parseInt(useCaptions) == 1); }
 
-        var flashConfig = { src: M.filter_rtmp._swf_cfg_base };
+        var flashConfig = { src: M.filter_rtmp._swf_cfg_play };
         // If dimensions specified, pass along in Flash configs
         if (mediaHeight > 0 && mediaWidth > 0) {
             flashConfig.width = mediaWidth; flashConfig.height = mediaHeight;
@@ -90,7 +91,8 @@ M.filter_rtmp = {
 
         var flowConfig = {
             plugins: {
-                controls: { autoHide: true }, rtmp: { url: M.filter_rtmp._swf_cfg_rtmp, objectEncoding: 0 },
+                controls: { url: M.filter_rtmp._swf_cfg_ctrl, autoHide: true },
+                rtmp: { url: M.filter_rtmp._swf_cfg_rtmp, objectEncoding: 0 },
             },
             clip: baseClip,
             onLoad: function() {
@@ -147,10 +149,11 @@ M.filter_rtmp = {
         var playerId = playerNode.get('id');
         if (typeof(playerId) == 'undefined') { return; }
 
-        var flashConfig = { src: M.filter_rtmp._swf_cfg_base };
+        var flashConfig = { src: M.filter_rtmp._swf_cfg_play };
         var flowConfig = {
             plugins: {
-                controls: { autoHide: 'never', fullscreen: false, next: false, previous: false, scrubber: true,
+                controls: { url: M.filter_rtmp._swf_cfg_ctrl,
+                            autoHide: 'never', fullscreen: false, next: false, previous: false, scrubber: true,
                             play: true, pause: true, volume: true, mute: true, backgroundGradient: [0.5,0,0.3],
                             controlall: true, height: '100%', time: true },
                 rtmp: { url: M.filter_rtmp._swf_cfg_rtmp, durationFunc: 'getStreamLength' }
