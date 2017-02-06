@@ -21,16 +21,14 @@
  *  a media plugin that plays that media inline
  *
  * @package    filter_rtmp
- * @author     Lacey Vickery, Fred Woolard (based on mediaplugin filter {@link http://moodle.com})
- * @copyright  2012 Appalachian State University
+ * @author     Michelle Melton, Fred Woolard (based on mediaplugin filter {@link http://moodle.com})
+ * @copyright  2017 Appalachian State University
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 $string['filtername']    = 'Streaming media filter (RTMP)';
-
 $string['rtmp_audio']    = 'Filter audio (.mp3)';
 $string['rtmp_video']    = 'Filter video (.flv|.mp4|.f4v)';
 $string['rtmp_defcc']    = 'Closed captions on by default';
-
 $string['rtmp_hls_fallback'] = 'Fallback to HLS';
-$string['rtmp_hls_urlfmt']   = 'HLS Url Style';
+$string['rtmp_hls_urlfmt']   = 'HLS url style';

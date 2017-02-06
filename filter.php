@@ -21,13 +21,12 @@
  *  a media plugin that plays that media inline
  *
  * @package    filter_rtmp
- * @author     Lacey Vickery, Fred Woolard (based on mediaplugin filter {@link http://moodle.com})
- * @copyright  2012 Appalachian State University
+ * @author     Michelle Melton, Fred Woolard (based on mediaplugin filter {@link http://moodle.com})
+ * @copyright  2017 Appalachian State University
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
-
 
 class filter_rtmp extends moodle_text_filter
 {
@@ -45,8 +44,6 @@ class filter_rtmp extends moodle_text_filter
     private $mediarenderer;
     /** @var string Partial regex pattern indicating possible embeddable content */
     private $embedmarkers;
-
-
 
     /**
      * Search for specific href values within <a> tags beginning
@@ -83,8 +80,8 @@ class filter_rtmp extends moodle_text_filter
         }
 
         if (!$this->mediarenderer) {
-            $this->mediarenderer = $PAGE->get_renderer('filter_rtmp');
-            $this->embedmarkers = $this->mediarenderer->get_embeddable_markers();
+            $this->mediarenderer = core_media_manager::instance();
+            $this->embedmarkers = core_media_manager::instance()->get_embeddable_markers();
         }
 
         // Check permissions, will be examined in the preg_replace callback
@@ -128,10 +125,7 @@ class filter_rtmp extends moodle_text_filter
         }
 
         return $newtext;
-
     }
-
-
 
     /**
      * Callback routine passed to preg_replace_callback(). Replace
@@ -142,7 +136,6 @@ class filter_rtmp extends moodle_text_filter
      */
     private function callback(array $matches)
     {
-
         // Check if we ignore it.
         if (preg_match('/class="[^"]*nomediaplugin/i', $matches[0])) {
             return $matches[0];
@@ -156,7 +149,6 @@ class filter_rtmp extends moodle_text_filter
 
         // Split provided URL into alternatives.
         list($urls, $options) = self::split_alternatives($matches[1], $width, $height);
-
 
         // Trusted if $CFG allowing object embed and 'noclean'
         // was passed to the filter method as an option
@@ -179,7 +171,6 @@ class filter_rtmp extends moodle_text_filter
 
     }
 
-
     /**
      * Lifted from lib/medialib.php. Need to omit the call to clean_param
      * until 'rtmp' is added as a valid scheme in the Moodle core libs.
@@ -194,14 +185,12 @@ class filter_rtmp extends moodle_text_filter
     {
         global $DB, $COURSE, $CFG;
 
-
         $orig_urls    = array_map('trim', explode('#', $combinedurl));
         $width        = 0;
         $height       = 0;
         $clip_urls    = array();
         $clip_names   = array();
         $options      = array();
-
 
         // First pass through the array to expand any playlist entries
         // and look for height-width parameters
@@ -248,7 +237,6 @@ class filter_rtmp extends moodle_text_filter
 
         } // foreach - first pass
 
-
         // Second pass, massage the URLs and parse any height or width
         // or clip name or close caption directive
         foreach($expanded_list as $list_item) {
@@ -279,7 +267,6 @@ class filter_rtmp extends moodle_text_filter
 
     }
 
-
     /**
      * Determine which flowplayer files are present, and from the names
      * the version is apparent.
@@ -293,8 +280,6 @@ class filter_rtmp extends moodle_text_filter
     private static function get_flowplayer_filenames()
     {
         global $CFG;
-
-
 
         $flowlibpath    = $CFG->libdir  . "/flowplayer";
         $filterpath     = $CFG->dirroot . "/filter/rtmp";
@@ -316,9 +301,7 @@ class filter_rtmp extends moodle_text_filter
         $retval .= "var filter_rtmp_hls_fallback={$hls_fallback};";
 
         return $retval;
-
     }
-
 
     /**
      * Fetch a playlist entry
@@ -349,8 +332,6 @@ class filter_rtmp extends moodle_text_filter
            // Squelch it, assume playlist table not present
            return false;
        }
-
     } // get_playlist
-
 
 } // class filter_rtmp

@@ -21,14 +21,13 @@
  *  a media plugin that plays that media inline
  *
  * @package    filter_rtmp
- * @author     Fred Woolard <woolardfa@appstate.edu>
- * @copyright  2015 Appalachian State University
+ * @author     Michelle Melton, Fred Woolard (based on mediaplugin filter {@link http://moodle.com})
+ * @copyright  2017 Appalachian State University
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 define('HEADER_NOTFOUND', 'HTTP/1.1 404 Not Found');
-
 
 /**
  * Safer flash serving code. Lifted from  Petr Skoda's function
@@ -41,8 +40,6 @@ define('HEADER_NOTFOUND', 'HTTP/1.1 404 Not Found');
 function send_flash_content($filename)
 {
     global $CFG;
-
-
 
     // Our referrers only, nobody else should embed these scripts.
     if (empty($_SERVER['HTTP_REFERER'])) {
@@ -80,5 +77,4 @@ function send_flash_content($filename)
     echo base64_decode($content);
     
     die;
-
 }

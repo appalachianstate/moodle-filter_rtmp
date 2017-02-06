@@ -21,15 +21,15 @@
  *  a media plugin that plays that media inline
  *
  * @package    filter_rtmp
- * @author     Lacey Vickery, Fred Woolard (based on mediaplugin filter {@link http://moodle.com})
- * @copyright  2012 Appalachian State University
+ * @author     Michelle Melton, Fred Woolard (based on mediaplugin filter {@link http://moodle.com})
+ * @copyright  2017 Appalachian State University
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2013052007;       // The current plugin version (Date: YYYYMMDDXX)
-$plugin->requires  = 2015110600.00;    // Requires this Moodle version
+$plugin->version   = 2017020600;       // The current plugin version (Date: YYYYMMDDXX)
+$plugin->requires  = 2016120501.04;    // Requires this Moodle version
 $plugin->cron      = 0;
 $plugin->component = 'filter_rtmp';    // Full name of the plugin (used for diagnostics)
 $plugin->maturity  = MATURITY_STABLE;
