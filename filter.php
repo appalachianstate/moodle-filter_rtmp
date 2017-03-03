@@ -18,7 +18,7 @@
  *  RTMP streaming media filter plugin
  *
  *  This filter will replace any rtmp links to a media file with
- *  a media plugin that plays that media inline
+ *  a media plugin that plays that media inline via the core VideoJS media player
  *
  * @package    filter_rtmp
  * @author     Michelle Melton, Fred Woolard (based on mediaplugin filter {@link http://moodle.com})
@@ -28,120 +28,105 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-class filter_rtmp extends moodle_text_filter
-{
+/**
+ * RTMP media embedding filter class.
+ */
 
-  // Inherited member vars
-  //
-  ///** @var object The context we are in. */
-  //protected $context;
-  ///** @var array Any local configuration for this filter in this context. */
-  //protected $localconfig;
-
+class filter_rtmp extends moodle_text_filter {
     /** @var bool True if currently filtering trusted text */
     private $trusted;
-    /** @var core_media_renderer Media renderer */
-    private $mediarenderer;
-    /** @var string Partial regex pattern indicating possible embeddable content */
-    private $embedmarkers;
 
     /**
-     * Search for specific href values within <a> tags beginning
-     * with rtmp protocol and modify the tag for the flowplayer
+     * Filter media player code to update for RTMP
      *
-     * @param string    $text
-     * @param array     $options
-     *
-     * @return string
-     * @uses $CFG, $PAGE
+     * {@inheritDoc}
+     * @see moodle_text_filter::filter()
      */
-    public function filter($text, array $options = array())
-    {
+    public function filter($text, array $options = array()) {
         global $CFG, $PAGE;
-        static $js_init_called = false;
-
-        // Need this test unfortunately because the page content
-        // is pre-rendered in some places such as question preview
-        // which goofs the $js_init_called assignment--which is
-        // used to prevent some necessary inline JavaScript from
-        // being emitted more than once
-        if ($PAGE->pagetype == 'question-preview' && $PAGE->state != moodle_page::STATE_IN_BODY) {
-            return $text;
-        }
 
         if (!is_string($text) or empty($text)) {
-            // non string data can not be filtered anyway
+            // Non string data can not be filtered anyway.
             return $text;
         }
 
-        if (stripos($text, '</a>') === false) {
-            // Performance shortcut - if not </a> tag, nothing can match.
+        if (stripos($text, '</a>') === false && stripos($text, '</video>') === false && stripos($text, '</audio>') === false) {
+            // Performance shortcut - if there are no </a>, </video> or </audio> tags, nothing can match.
             return $text;
         }
 
-        if (!$this->mediarenderer) {
-            $this->mediarenderer = core_media_manager::instance();
-            $this->embedmarkers = core_media_manager::instance()->get_embeddable_markers();
+        if (stripos($text, 'href="rtmp') === false && stripos($text, 'src="rtmp') === false) {
+            // If there are no rtmp sources, do nothing.
+            return $text;
         }
 
-        // Check permissions, will be examined in the preg_replace callback
+        // Check SWF permissions.
         $this->trusted = !empty($options['noclean']) or !empty($CFG->allowobjectembed);
 
         // Handle all links that contain any 'embeddable' marker text (it could
         // do all links, but the embeddable markers thing should make it faster
         // by meaning for most links it doesn't drop into PHP code).
-        $regex = '~<a\s[^>]*href="(rtmp:\/\/(?:playlist=[^"]*|[^"]*(?:' . $this->embedmarkers . '))[^"]*)"[^>]*>([^>]*)</a>~is';
-        $newtext = preg_replace_callback($regex, array($this, 'callback'), $text);
+        if (stripos($text, '</a>')) {
+            // Get embed markers from RTMP filter settings.
+            $embedmarkers = "";
+            if (isset($CFG->filter_rtmp_enable_audio)) {
+                $embedmarkers .= "\.mp3";
+            }
+            if (isset($CFG->filter_rtmp_enable_video)) {
+                if (!$embedmarkers == "") {
+                    $embedmarkers .= "|";
+                }
+                $embedmarkers .= "\.flv|\.mp4|\.f4v";
+            }
+            $regex = '~<a\s[^>]*href="(rtmp:\/\/(?:playlist=[^"]*|[^"]*(?:' . $embedmarkers . '))[^"]*)"[^>]*>([^>]*)</a>~is';
+            $text = preg_replace_callback($regex, array($this, 'callback'), $text);
+        }
 
-        // If no joy or no change then return original
-        if (empty($newtext) || $newtext === $text) {
+        $matches = preg_split('/(<video[^>]*>)|(<source[^>]*>)/i', $text, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+        if (!$matches) {
             return $text;
         }
 
-        // Only want one init per page, so one and done
-        if (!$js_init_called) {
+        for ($i = 0; $i < count($matches); $i++) {
+            if (stripos($matches[$i], '<video') !== false) {
+                if (stripos($matches[$i + 1], '<source src="rtmp') !== false) {
+                    // Remove fluid setting (not compatible with RTMP) and add fixed width of 400
+                    // TODO: Change width to match setting from insert media, or possibly filter setting?
+                    $datasetup = 'data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true}"';
+                    $newdatasetup = 'data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;width&quot;: 400}"';
+                    $matches[$i] = str_replace($datasetup, $newdatasetup, $matches[$i]);
 
-            $js_init_called = true;
-
-            // Need to emit page (global) js vars so our js module
-            // can load the currently available Flowplayer files
-            $newtext .= "\n" . html_writer::script(self::get_flowplayer_filenames());
-
-            if (empty($CFG->cachetext)) {
-                // If not caching filter output, then cleaner
-                // to add a page requirement
-                $PAGE->requires->js_init_call('M.filter_rtmp.init', null, true, array('name' => 'filter_rtmp', 'fullpath' => '/filter/rtmp/module.js', 'requires' => array('node')));
-            } else {
-                // If caching, this filter will never get called
-                // until cache is refreshed, side-effect is that
-                // needed call to M.filter_rtmp.init is not made
-                // when needed, so have to make that js call part
-                // of the substituted (and cached) content
-                $newtext .= "\n"
-                         . html_writer::script("M.yui.add_module({ filter_rtmp: { name: 'filter_rtmp', fullpath: '{$CFG->wwwroot}/filter/rtmp/module.js', requires: ['node'] }});\n"
-                         .                     "YUI().use('node', function(Y) { Y.on('domready', function() { Y.use('filter_rtmp', function(Y) { M.filter_rtmp.init(Y); }); }); });");
+                    $matches[$i + 1] = str_replace('type="video/', 'type="rtmp/', $matches[$i + 1]);
+                }
             }
-
+            if (stripos($matches[$i], '<audio') !== false) {
+                if (stripos($matches[$i + 1], '<source src="rtmp') !== false) {
+                    $matches[$i + 1] = str_replace('type="audio/', 'type="rtmp/', $matches[$i + 1]);
+                }
+            }
         }
 
-        return $newtext;
+        $filteredtext = "";
+        foreach ($matches as $match) {
+            $filteredtext .= $match;
+        }
+        return $filteredtext;
     }
 
     /**
-     * Callback routine passed to preg_replace_callback(). Replace
-     * link with embedded content, if supported.
+     * Callback routine passed to preg_replace_callback().
+     * Replace link with embedded content, if supported.
      *
-     * @param array     $matches        Array provided by preg_replace_callback. [0] original text, [1] href attribute, [2] anchor label.
-     * @return string
+     * @param   array $matches    Array provided by preg_replace_callback. [0] original text, [1] href attribute, [2] anchor label.
+     * @return  string
      */
-    private function callback(array $matches)
-    {
+    private function callback(array $matches) {
         // Check if we ignore it.
         if (preg_match('/class="[^"]*nomediaplugin/i', $matches[0])) {
             return $matches[0];
         }
 
-        // Get name, use default if empty
+        // Get name, use default if empty.
         $name = trim($matches[2]);
         if (empty($name)) {
             $name = 'Media Stream (RTMP)';
@@ -151,156 +136,106 @@ class filter_rtmp extends moodle_text_filter
         list($urls, $options) = self::split_alternatives($matches[1], $width, $height);
 
         // Trusted if $CFG allowing object embed and 'noclean'
-        // was passed to the filter method as an option
+        // was passed to the filter method as an option.
         if ($this->trusted) {
-            $options[core_media::OPTION_TRUSTED] = true;
+            $options[core_media_manager::OPTION_TRUSTED] = true;
         }
 
         // We could test whether embed is possible using can_embed, but to save
         // time, let's just embed it with the 'fallback to blank' option which
         // does most of the same stuff anyhow.
-        $options[core_media::OPTION_FALLBACK_TO_BLANK] = true;
+        $options[core_media_manager::OPTION_FALLBACK_TO_BLANK] = true;
 
         // NOTE: Options are not passed through from filter because the 'embed'
         // code does not recognise filter options (it's a different kind of
         // option-space) as it can be used in non-filter situations.
-        $result = $this->mediarenderer->embed_alternatives($urls, $name, $width, $height, $options);
+        $result = core_media_manager::instance()->embed_alternatives($urls, $name, $width, $height, $options);
 
         // If something was embedded, return it, otherwise return original.
         return (empty($result) ? $matches[0] : $result);
-
     }
 
     /**
      * Lifted from lib/medialib.php. Need to omit the call to clean_param
      * until 'rtmp' is added as a valid scheme in the Moodle core libs.
      *
-     * @param string $combinedurl String of 1 or more alternatives separated by #
-     * @param int    $width        Output variable: width (will be set to 0 if not specified)
-     * @param int    $height       Output variable: height (0 if not specified)
-     * @return array               Containing two elements, an array of 1 or more moodle_url objects, and an array of names (optional)
-     * @uses $DB, $COURSE, $CFG
+     * @param   string  $combinedurl    String of 1 or more alternatives separated by #
+     * @param   int     $width          Output variable: width (will be set to 0 if not specified)
+     * @param   int     $height         Output variable: height (0 if not specified)
+     * @return  array                   Containing two elements, an array of 1 or more moodle_url objects,
+     *                                  and an array of names (optional)
+     * @uses    $DB, $COURSE, $CFG
      */
-    private static function split_alternatives($combinedurl, &$width, &$height)
-    {
+    private static function split_alternatives($combinedurl, &$width, &$height) {
         global $DB, $COURSE, $CFG;
 
-        $orig_urls    = array_map('trim', explode('#', $combinedurl));
+        $origurls    = array_map('trim', explode('#', $combinedurl));
         $width        = 0;
         $height       = 0;
-        $clip_urls    = array();
-        $clip_names   = array();
+        $clipurls    = array();
+        $clipnames   = array();
         $options      = array();
 
         // First pass through the array to expand any playlist entries
-        // and look for height-width parameters
-        $expanded_list = array();
+        // and look for height-width parameters.
+        $expandedlist = array();
 
-        foreach ($orig_urls as $url) {
-
+        foreach ($origurls as $url) {
             $matches = null;
 
             if (preg_match('/^rtmp:\/\/playlist=(.+)/', $url, $matches)) {
-
-                // The HTML editor content (where URLs with which we
-                // are concerned are placed) is massaged, converting
-                // ampersands. We need to put them back to match the
-                // playlist name
-                $playlist_record = self::get_playlist($COURSE->id, htmlspecialchars_decode($matches[1]));
-                if (!$playlist_record) {
+                // The HTML editor content (where URLs with which we are
+                // concerned are placed) is massaged, converting ampersands.
+                // We need to put them back to match the playlist name.
+                $playlistrecord = self::get_playlist($COURSE->id, htmlspecialchars_decode($matches[1]));
+                if (!$playlistrecord) {
                     continue;
                 }
 
-                foreach (explode("\n", $playlist_record->list) as $list_item) {
-                    $expanded_list[] = trim($list_item);
+                foreach (explode("\n", $playlistrecord->list) as $listitem) {
+                    $expandedlist[] = trim($listitem);
                 }
 
                 // With a playlist, do not want the page littered
                 // with links while waiting for the JavaScript to
-                // replace them with the media player
-                $options[core_media::OPTION_NO_LINK] = true;
-
-            } elseif (preg_match('/^d=([\d]{1,4})x([\d]{1,4})$/i', $url, $matches)) {
-
+                // replace them with the media player.
+                $options[core_media_manager::OPTION_NO_LINK] = true;
+            } else if (preg_match('/^d=([\d]{1,4})x([\d]{1,4})$/i', $url, $matches)) {
                 // You can specify the size as a separate part of the array like
                 // #d=640x480 without actually including as part of a url.
                 $width  = $matches[1];
                 $height = $matches[2];
                 continue;
-
             } else {
-
-                // Append as is
-                $expanded_list[] = $url;
-
+                // Append as is.
+                $expandedlist[] = $url;
             }
-
         } // foreach - first pass
 
         // Second pass, massage the URLs and parse any height or width
-        // or clip name or close caption directive
-        foreach($expanded_list as $list_item) {
-
+        // or clip name or close caption directive.
+        foreach ($expandedlist as $listitem) {
             // First parse using comma delimter to separate playlist
-            // names (if present) from the URL
-            @list($list_item_url, $list_item_name) = array_map('trim', explode(',', $list_item, 2));
+            // names (if present) from the URL.
+            @list($listitemurl, $listitemname) = array_map('trim', explode(',', $listitem, 2));
 
             // Clean up url. But first substitute the rtmp scheme with
             // http to allow validation against everything else, then
             // put the rtmp back.
-            $list_item_url = preg_replace('/^rtmp:\/\//i', 'http://', $list_item_url, 1);
-            $list_item_url = clean_param($list_item_url, PARAM_URL);
-            if (empty($list_item_url)) {
+            $listitemurl = preg_replace('/^rtmp:\/\//i', 'http://', $listitemurl, 1);
+            $listitemurl = clean_param($listitemurl, PARAM_URL);
+            if (empty($listitemurl)) {
                 continue;
             }
-            $list_item_url = preg_replace('/^http:\/\//', 'rtmp://', $list_item_url, 1);
+            $listitemurl = preg_replace('/^http:\/\//', 'rtmp://', $listitemurl, 1);
 
             // Turn it into moodle_url object.
-            $clip_urls[]    = new moodle_url($list_item_url);
-            $clip_names[]   = empty($list_item_name) ? '' : htmlspecialchars_decode($list_item_name);
-
+            $clipurls[]    = new moodle_url($listitemurl);
+            $clipnames[]   = empty($listitemname) ? '' : htmlspecialchars_decode($listitemname);
         } // foreach - second pass
 
-        $options['PLAYLIST_NAMES'] = $clip_names;
-
-        return array($clip_urls, $options);
-
-    }
-
-    /**
-     * Determine which flowplayer files are present, and from the names
-     * the version is apparent.
-     *
-     * @access private
-     * @static
-     *
-     * @return array Array of filenames
-     * @uses $CFG
-     */
-    private static function get_flowplayer_filenames()
-    {
-        global $CFG;
-
-        $flowlibpath    = $CFG->libdir  . "/flowplayer";
-        $filterpath     = $CFG->dirroot . "/filter/rtmp";
-
-        $glob_paths = array(
-            'js'        => $flowlibpath . "/flowplayer-[0-9].[0-9].?*.min.js",
-            'playswf'   => $flowlibpath . "/flowplayer-[0-9].[0-9].?*.swf.php",
-            'ctrlswf'   => $flowlibpath . "/flowplayer.controls-[0-9].[0-9].?*.swf.php"
-        );
-
-        $retval = '';
-        foreach ($glob_paths as $key => $path) {
-            if (($hit = glob($path))) {
-                $relpath = str_replace($CFG->dirroot, '', $hit[0]);
-                $retval .= "var filter_rtmp_flowplayer_$key='$relpath';";
-            }
-        }
-        $hls_fallback = $CFG->filter_rtmp_hls_fallback ? 'true' : 'false';
-        $retval .= "var filter_rtmp_hls_fallback={$hls_fallback};";
-
-        return $retval;
+        $options['PLAYLIST_NAMES'] = $clipnames;
+        return array($clipurls, $options);
     }
 
     /**
@@ -309,29 +244,26 @@ class filter_rtmp extends moodle_text_filter
      * @access private
      * @static
      *
-     * @param int       $course_id
-     * @param string    $name
-     * @return mixed                Playlist record (object) or false if not found
+     * @param   int       $courseid
+     * @param   string    $name
+     * @return  mixed     Playlist record (object) or false if not found
      *
      * @uses $DB
      */
-    private static function get_playlist($course_id, $name)
-    {
-       global $DB;
-       static $cache = array();
+    private static function get_playlist($courseid, $name) {
+        global $DB;
+        static $cache = array();
 
-       $key = "{$course_id}:{$name}";
-       if (array_key_exists($key, $cache))
-           return $cache[$key];
-
-       try {
-           $cache[$key] = $DB->get_record('playlist', array('course' => $course_id, 'name' => $name));
-           return $cache[$key];
-       }
-       catch (Exception $exc) {
-           // Squelch it, assume playlist table not present
-           return false;
-       }
+        $key = "{$courseid}:{$name}";
+        if (array_key_exists($key, $cache)) {
+            return $cache[$key];
+        }
+        try {
+            $cache[$key] = $DB->get_record('playlist', array('course' => $courseid, 'name' => $name));
+            return $cache[$key];
+        } catch (Exception $exc) {
+            // Squelch it, assume playlist table not present.
+            return false;
+        }
     } // get_playlist
-
 } // class filter_rtmp

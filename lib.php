@@ -37,18 +37,17 @@ define('HEADER_NOTFOUND', 'HTTP/1.1 404 Not Found');
  * @return void
  * @uses $CFG
  */
-function send_flash_content($filename)
-{
+function send_flash_content($filename) {
     global $CFG;
 
     // Our referrers only, nobody else should embed these scripts.
     if (empty($_SERVER['HTTP_REFERER'])) {
-        // No referrer, no joy
+        // No referrer, no joy.
         header(HEADER_NOTFOUND);
         die;
     }
-    
-    $refhost = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);    
+
+    $refhost = parse_url($_SERVER['HTTP_REFERER'], PHP_URL_HOST);
     $ourhost = parse_url($CFG->wwwroot . '/', PHP_URL_HOST);
     if (strtolower($refhost) !== strtolower($ourhost)) {
         header(HEADER_NOTFOUND);
@@ -56,12 +55,12 @@ function send_flash_content($filename)
     }
 
     // The contents of the .swf file are encoded (base64) and put
-    // in a file of the same name with a .bin extension
+    // in a file of the same name with a .bin extension.
     if (false === ($content = file_get_contents($filename . '.bin'))) {
         header(HEADER_NOTFOUND);
         die;
     }
-    
+
     // No caching allowed. HTTPS sites - watch out
     // for IE! KB812935 and KB316431.
     if (strpos($CFG->wwwroot, 'https://') === 0) {
@@ -75,6 +74,6 @@ function send_flash_content($filename)
     header('Expires: ' . gmdate('D, d M Y H:i:s', 0) . ' GMT');
     header('Content-Type: application/x-shockwave-flash');
     echo base64_decode($content);
-    
+
     die;
 }
