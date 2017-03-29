@@ -105,25 +105,26 @@ class filter_rtmp extends moodle_text_filter {
                 $matches[$i] = preg_replace($pattern, $replacement, $matches[$i]);
                 
                 $matches[$i + 1] = str_replace('type="video/', 'type="rtmp/', $matches[$i + 1]);
+                $matches[$i + 1] = str_replace('&amp;', '&', $matches[$i + 1]);
                 
                 //if (stripos($matches[$i + 1], '.mp4') !== false) {
                     
                 //}
-                if (stripos($matches[$i + 1], '.flv') !== false) {
-                    $matches[$i + 1] = str_replace('mp4:', 'flv:', $matches[$i + 1]);
-                }
+                //if (stripos($matches[$i + 1], '.flv') !== false) {
+                    //$matches[$i + 1] = str_replace('mp4:', 'flv:', $matches[$i + 1]);
+                //}
                 //if (stripos($matches[$i + 1], '.f4v') !== false) {
                 
                 //}
                 if (stripos($matches[$i + 1], '.mp3') !== false) {
                     $matches[$i + 1] = str_replace('type="audio/', 'type="rtmp/', $matches[$i + 1]);
-                    $matches[$i + 1] = str_replace('mp4:', 'mp3:', $matches[$i + 1]);
+                    //$matches[$i + 1] = str_replace('mp4:', 'mp3:', $matches[$i + 1]);
                 }
                 
                 // Add iOS source
                 $iossource = $matches[$i + 1];
                 $iossource = str_replace('src="rtmp', 'src="http', $iossource);
-                $iossource = str_replace('&amp;', '_definst_/', $iossource);
+                $iossource = str_replace('&', '_definst_/', $iossource);
                 
                 if (stripos($iossource, '.mp4') !== false) {
                     $iossource = str_replace('.mp4', '.mp4/playlist.m3u8', $iossource);
@@ -178,6 +179,8 @@ class filter_rtmp extends moodle_text_filter {
                 $replacement = 'data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true, &quot;controlBar&quot;: {&quot;fullscreenToggle&quot;: false}, &quot;aspectRatio&quot;: &quot;1:0&quot;, &quot;width&quot;: 400, &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}';
                 $matches[$i] = preg_replace($pattern, $replacement, $matches[$i]);
                 
+                $matches[$i + 1] = str_replace('&amp;', '&', $matches[$i + 1]);
+                
                 //$matches[$i + 1] = str_replace('type="audio/', 'type="rtmp/', $matches[$i + 1]);
                 //$matches[$i + 1] = str_replace('mp4:', 'mp3:', $matches[$i + 1]);
                 
@@ -199,7 +202,7 @@ class filter_rtmp extends moodle_text_filter {
                 // Add iOS source
                 $iossource = $matches[$i + 1];
                 $iossource = str_replace('src="rtmp', 'src="http', $iossource);
-                $iossource = str_replace('&amp;', '_definst_/', $iossource);
+                $iossource = str_replace('&', '_definst_/', $iossource);
                 
                 if (stripos($iossource, '.mp4') !== false) {
                     $iossource = str_replace('.mp4', '.mp4/playlist.m3u8', $iossource);
@@ -219,27 +222,6 @@ class filter_rtmp extends moodle_text_filter {
                 }
                 $iossource = str_replace('type="rtmp/', 'type="audio/', $iossource);
                 $matches[$i + 1] = $matches[$i + 1] . $iossource;
-                
-                // Add track code for captions.
-                $captionfile = str_replace('<source src="', '', $iossource);
-                if (stripos($captionfile, '.mp4') !== false) {
-                    $captionfile = str_replace('.mp4/playlist.m3u8" type="video/mp4" />', '.vtt', $captionfile);
-                    $captionfile = str_replace('mp4:', '', $captionfile);
-                }
-                if (stripos($captionfile, '.flv') !== false) {
-                    $captionfile = str_replace('.flv/playlist.m3u8" type="video/mp4" />', '.vtt', $captionfile);
-                    $captionfile = str_replace('mp4:', '', $captionfile);
-                }
-                if (stripos($captionfile, '.f4v') !== false) {
-                    $captionfile = str_replace('.f4v/playlist.m3u8" type="video/mp4" />', '.vtt', $captionfile);
-                    $captionfile = str_replace('mp4:', '', $captionfile);
-                }
-                if (stripos($captionfile, '.mp3') !== false) {
-                    $captionfile = str_replace('.mp3/playlist.m3u8" type="audio/mp3" />', '.vtt', $captionfile);
-                    $captionfile = str_replace('mp3:', '', $captionfile);
-                }
-                $trackcode = '<track kind="captions" src="' . $captionfile . '" srclang="en" label="English" default="">';
-                $matches[$i + 1] = $matches[$i + 1] . $trackcode;
             }
         }
 
