@@ -21,8 +21,8 @@
  *  a media plugin that plays that media inline
  *
  * @package    filter_rtmp
- * @author     Lacey Vickery, Fred Woolard (based on mediaplugin filter {@link http://moodle.com})
- * @copyright  2012 Appalachian State University
+ * @author     Michelle Melton, Fred Woolard (based on mediaplugin filter {@link http://moodle.com})
+ * @copyright  2017 Appalachian State University
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

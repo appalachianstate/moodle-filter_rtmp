@@ -1,4 +1,3 @@
-
  README for filter_rtmp plugin/module
  
  DISCLAIMER AND LICENSING
@@ -19,15 +18,10 @@
 
  GENERAL INFORMATION
  -------------------
- The RTMP filter is an extension of the Moodle core_media_renderer
- (filter, renderer, player) module. It looks for any anchor href
- values that begin with 'rtmp://' and substitues the necessary html
- span tag with attributes to be used by a corresponding javascript
- module.
- 
- The module.js javascript file applies the flowplayer function, using
- Flowplayer's rtmp plugin, to the <span> elements with class values of
- 'filter_rtmp_audio', or 'filter_rtmp_video'.
+ The RTMP filter looks for anchor href values that begin with
+ 'rtmp://' and HTML5 video or audio code that contains RTMP 
+ src and substitutes the necessary HTML to work with Moodle's
+ media plugin, VideoJS.
  
 
  INSTALLATION
@@ -35,28 +29,3 @@
  Place the rtmp directory in the site's filter directory. Access the
  notifications admin page to confirm installation. Select which of the
  the players (audio or video) you want enabled for filtering.
-
-
- FLOWPLAYER LICENSE
- ------------------
- The MIT License
-
- Copyright (c) 2008 Flowplayer Ltd
-
- Permission is hereby granted, free of charge, to any person obtaining a copy
- of this software and associated documentation files (the "Software"), to deal
- in the Software without restriction, including without limitation the rights
- to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- copies of the Software, and to permit persons to whom the Software is
- furnished to do so, subject to the following conditions:
-
- The above copyright notice and this permission notice shall be included in
- all copies or substantial portions of the Software.
-
- THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- THE SOFTWARE.
