@@ -121,73 +121,14 @@ class filter_rtmp extends moodle_text_filter {
 
                 // If HLS fallback is set, add iOS source.
                 if ($CFG->filter_rtmp_hls_fallback) {
-                    // Get RTMP formatted source, update src for HLS.
-                    $iossource = $matches[$i + 1];
-                    $iossource = str_replace('src="rtmp', 'src="http', $iossource);
-                    $iossource = str_replace('&', '_definst_/', $iossource);
-
-                    // Prepare HLS URL style based on configured setting.
-                    switch ($CFG->filter_rtmp_hls_urlfmt) {
-                        // Adobe Media Server.
-                        case 'fms':
-                            $hlsurl = ".m38u";
-                            break;
-                        // Wowza Streaming Engine (wse).
-                        default:
-                            $hlsurl = "/playlist.m3u8";
-                    }
-
-                    // Format HLS .mp4 src URL with corresponding server format.
-                    if (stripos($iossource, '.mp4') !== false) {
-                        $iossource = str_replace('.mp4', '.mp4' . $hlsurl, $iossource);
-                    }
-
-                    // Format HLS .flv src URL with mp4 MIME type and corresponding server format.
-                    if (stripos($iossource, '.flv') !== false) {
-                        $iossource = str_replace('flv:', 'mp4:', $iossource);
-                        $iossource = str_replace('.flv', '.flv' . $hlsurl, $iossource);
-                        $iossource = str_replace('rtmp/x-flv', 'video/mp4', $iossource);
-                    }
-
-                    // Format HLS .f4v src URL with corresponding server format.
-                    if (stripos($iossource, '.f4v') !== false) {
-                        $iossource = str_replace('.f4v', '.f4v' . $hlsurl, $iossource);
-                    }
-
-                    // Format HLS .mp3 src URL with corresponding server format and audio type.
-                    if (stripos($iossource, '.mp3') !== false) {
-                        $iossource = str_replace('.mp3', '.mp3' . $hlsurl, $iossource);
-                        $iossource = str_replace('type="rtmp/', 'type="audio/', $iossource);
-                    }
-
-                    // Update RTMP type to video for HLS.
-                    $iossource = str_replace('type="rtmp/', 'type="video/', $iossource);
-                    $matches[$i + 1] = $matches[$i + 1] . $iossource;
+                    $hlssource = self::get_hls_source($matches[$i + 1]);
+                    $matches[$i + 1] = $matches[$i + 1] . $hlssource;
                 }
 
                 // If closed captions on by default is set, add track code for captions.
                 if ($CFG->filter_rtmp_default_cc) {
-                    // Get VideoJS formatted HLS source, update src for WebVTT captions (VideoJS).
-                    $captionfile = str_replace('<source src="', '', $iossource);
-                    if (stripos($captionfile, '.mp4') !== false) {
-                        $captionfile = str_replace('.mp4/playlist.m3u8" type="video/mp4" />', '.vtt', $captionfile);
-                        $captionfile = str_replace('mp4:', '', $captionfile);
-                    }
-                    if (stripos($captionfile, '.flv') !== false) {
-                        $captionfile = str_replace('.flv/playlist.m3u8" type="video/mp4" />', '.vtt', $captionfile);
-                        $captionfile = str_replace('mp4:', '', $captionfile);
-                    }
-                    if (stripos($captionfile, '.f4v') !== false) {
-                        $captionfile = str_replace('.f4v/playlist.m3u8" type="video/mp4" />', '.vtt', $captionfile);
-                        $captionfile = str_replace('mp4:', '', $captionfile);
-                    }
-                    if (stripos($captionfile, '.mp3') !== false) {
-                        $captionfile = str_replace('.mp3/playlist.m3u8" type="audio/mp3" />', '.vtt', $captionfile);
-                        $captionfile = str_replace('mp3:', '', $captionfile);
-                    }
-
-                    // Create track code with corresponding src URL, add to end of sources.
-                    $trackcode = '<track kind="captions" src="' . $captionfile . '" srclang="en" label="English" default="">';
+                    // Use HLS source as base for track code filtering.
+                    $trackcode = self::get_captions($hlssource);
                     $matches[$i + 1] = $matches[$i + 1] . $trackcode;
                 }
             }
@@ -233,49 +174,8 @@ class filter_rtmp extends moodle_text_filter {
 
                 // If HLS fallback is set, add iOS source.
                 if ($CFG->filter_rtmp_hls_fallback) {
-                    // Get RTMP formatted source, update src for HLS.
-                    $iossource = $matches[$i + 1];
-                    $iossource = str_replace('src="rtmp', 'src="http', $iossource);
-                    $iossource = str_replace('&', '_definst_/', $iossource);
-
-                    // Prepare HLS URL style based on configured setting.
-                    switch ($CFG->filter_rtmp_hls_urlfmt) {
-                        // Adobe Media Server.
-                        case 'fms':
-                            $hlsurl = ".m38u";
-                            break;
-                        // Wowza Streaming Engine (wse).
-                        default:
-                            $hlsurl = "/playlist.m3u8";
-                    }
-
-                    // Format HLS .mp4 src URL with corresponding server format.
-                    if (stripos($iossource, '.mp4') !== false) {
-                        $iossource = str_replace('.mp4', '.mp4' . $hlsurl, $iossource);
-                        $iossource = str_replace('type="rtmp/', 'type="video/', $iossource);
-                    }
-
-                    // Format HLS .flv src URL with mp4 MIME type and corresponding server format.
-                    if (stripos($iossource, '.flv') !== false) {
-                        $iossource = str_replace('flv:', 'mp4:', $iossource);
-                        $iossource = str_replace('.flv', '.flv' . $hlsurl, $iossource);
-                        $iossource = str_replace('rtmp/x-flv', 'video/mp4', $iossource);
-                    }
-
-                    // Format HLS .f4v src URL with corresponding server format.
-                    if (stripos($iossource, '.f4v') !== false) {
-                        $iossource = str_replace('.f4v', '.f4v' . $hlsurl, $iossource);
-                        $iossource = str_replace('type="rtmp/', 'type="video/', $iossource);
-                    }
-
-                    // Format HLS .mp3 src URL with corresponding server format and audio type.
-                    if (stripos($iossource, '.mp3') !== false) {
-                        $iossource = str_replace('.mp3', '.mp3' . $hlsurl, $iossource);
-                    }
-
-                    // Update RTMP type to audio for HLS.
-                    $iossource = str_replace('type="rtmp/', 'type="audio/', $iossource);
-                    $matches[$i + 1] = $matches[$i + 1] . $iossource;
+                    $hlssource = self::get_hls_source($matches[$i + 1]);
+                    $matches[$i + 1] = $matches[$i + 1] . $hlssource;
                 }
             }
         }
@@ -412,6 +312,78 @@ class filter_rtmp extends moodle_text_filter {
 
         $options['PLAYLIST_NAMES'] = $clipnames;
         return array($clipurls, $options);
+    }
+    
+    private static function get_hls_source($source) {
+        global $CFG;
+        
+        // Get RTMP formatted source, update src for HLS.
+        $hlssource = $source;
+        $hlssource = str_replace('src="rtmp', 'src="http', $hlssource);
+        $hlssource = str_replace('&', '_definst_/', $hlssource);
+        
+        // Prepare HLS URL style based on configured setting.
+        switch ($CFG->filter_rtmp_hls_urlfmt) {
+            // Adobe Media Server.
+            case 'fms':
+                $hlsurl = ".m38u";
+                break;
+                // Wowza Streaming Engine (wse).
+            default:
+                $hlsurl = "/playlist.m3u8";
+        }
+        
+        // Format HLS .mp4 src URL with corresponding server format.
+        if (stripos($hlssource, '.mp4') !== false) {
+            $hlssource = str_replace('type="rtmp/', 'type="video/', $hlssource);
+            $hlssource = str_replace('.mp4', '.mp4' . $hlsurl, $hlssource);
+        }
+        
+        // Format HLS .flv src URL with mp4 MIME type and corresponding server format.
+        if (stripos($hlssource, '.flv') !== false) {
+            $hlssource = str_replace('flv:', 'mp4:', $hlssource);
+            $hlssource = str_replace('.flv', '.flv' . $hlsurl, $hlssource);
+            $hlssource = str_replace('type="rtmp/x-flv', 'type="video/mp4', $hlssource);
+        }
+        
+        // Format HLS .f4v src URL with corresponding server format.
+        if (stripos($hlssource, '.f4v') !== false) {
+            $hlssource = str_replace('.f4v', '.f4v' . $hlsurl, $hlssource);
+            $hlssource = str_replace('type="rtmp/', 'type="video/', $hlssource);
+        }
+        
+        // Format HLS .mp3 src URL with corresponding server format and audio type.
+        if (stripos($hlssource, '.mp3') !== false) {
+            $hlssource = str_replace('.mp3', '.mp3' . $hlsurl, $hlssource);
+            $hlssource = str_replace('type="rtmp/', 'type="audio/', $hlssource);
+        }
+
+        return $hlssource;
+    }
+    
+    private static function get_captions($hlssource) {
+        // Get VideoJS formatted HLS source, update src for WebVTT captions (VideoJS).
+        $captionfile = str_replace('<source src="', '', $hlssource);
+        if (stripos($captionfile, '.mp4') !== false) {
+            $captionfile = str_replace('.mp4/playlist.m3u8" type="video/mp4" />', '.vtt', $captionfile);
+            $captionfile = str_replace('mp4:', '', $captionfile);
+        }
+        if (stripos($captionfile, '.flv') !== false) {
+            $captionfile = str_replace('.flv/playlist.m3u8" type="video/mp4" />', '.vtt', $captionfile);
+            $captionfile = str_replace('mp4:', '', $captionfile);
+        }
+        if (stripos($captionfile, '.f4v') !== false) {
+            $captionfile = str_replace('.f4v/playlist.m3u8" type="video/mp4" />', '.vtt', $captionfile);
+            $captionfile = str_replace('mp4:', '', $captionfile);
+        }
+        if (stripos($captionfile, '.mp3') !== false) {
+            $captionfile = str_replace('.mp3/playlist.m3u8" type="audio/mp3" />', '.vtt', $captionfile);
+            $captionfile = str_replace('mp3:', '', $captionfile);
+        }
+        
+        // Create track code with corresponding src URL, add to end of sources.
+        $trackcode = '<track kind="captions" src="' . $captionfile . '" srclang="en" label="English" default="">';
+        return $trackcode;
     }
 
     /**
