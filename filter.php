@@ -69,10 +69,10 @@ class filter_rtmp extends moodle_text_filter {
         if (stripos($text, '</a>')) {
             // Get embed markers from RTMP filter settings.
             $embedmarkers = "";
-            if (isset($CFG->filter_rtmp_enable_audio)) {
+            if ($CFG->filter_rtmp_enable_audio) {
                 $embedmarkers .= "\.mp3";
             }
-            if (isset($CFG->filter_rtmp_enable_video)) {
+            if ($CFG->filter_rtmp_enable_video) {
                 if (!$embedmarkers == "") {
                     $embedmarkers .= "|";
                 }
@@ -92,8 +92,7 @@ class filter_rtmp extends moodle_text_filter {
         for ($i = 0; $i < count($matches); $i++) {
             // Filter video tag with RTMP src.
             if (stripos($matches[$i], '<video') !== false && stripos($matches[$i + 1], '<source src="rtmp') !== false) {
-                // Capture data-setup config.
-                // TODO: What does this do?
+                // Capture data-setup config. Make sure gets entire config, even if 2 sets of }.
                 $pattern = '/(data-setup[^}]*)(}[^}]*)}/i';
                 if (preg_match($pattern, $matches[$i]) == 0) {
                     $pattern = '/(data-setup[^}]*)}/i';
@@ -128,6 +127,7 @@ class filter_rtmp extends moodle_text_filter {
                 // If closed captions on by default is set, add track code for captions.
                 if ($CFG->filter_rtmp_default_cc) {
                     // Use HLS source as base for track code filtering.
+                    $hlssource = self::get_hls_source($matches[$i + 1]);
                     $trackcode = self::get_captions($hlssource);
                     $matches[$i + 1] .= $trackcode;
                 }
@@ -135,8 +135,7 @@ class filter_rtmp extends moodle_text_filter {
 
             // Filter audio tag with RTMP src.
             if (stripos($matches[$i], '<audio') !== false && stripos($matches[$i + 1], '<source src="rtmp') !== false) {
-                // Capture data-setup config.
-                // TODO: What does this do?
+                // Capture data-setup config. Make sure gets entire config, even if 2 sets of }.
                 $pattern = '/(data-setup[^}]*)(}[^}]*)}/i';
                 if (preg_match($pattern, $matches[$i]) == 0) {
                     $pattern = '/(data-setup[^}]*)}/i';
