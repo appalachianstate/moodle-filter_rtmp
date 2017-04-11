@@ -102,8 +102,7 @@ class filter_rtmp extends moodle_text_filter {
                 // Remove "fluid": true (not compatible with RTMP).
                 // Add "width": 400.
                 // Add "techOrder": "flash", "html5" (set priority for Flash and HTML5 playback; required for RTMP).
-                $replacement = 'crossorigin="anonymous" data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;width&quot;: 400,
-                        &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}';
+                $replacement = 'crossorigin="anonymous" data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;width&quot;: 400, &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}';
                 $matches[$i] = preg_replace($pattern, $replacement, $matches[$i]);
 
                 // Update type for RTMP in child source code.
@@ -119,6 +118,7 @@ class filter_rtmp extends moodle_text_filter {
                 $matches[$i + 1] = str_replace('&amp;', '&', $matches[$i + 1]);
 
                 // If HLS fallback is set, add iOS source.
+                $hlssource = '';
                 if ($CFG->filter_rtmp_hls_fallback) {
                     $hlssource = self::get_hls_source($matches[$i + 1]);
                     $matches[$i + 1] .= $hlssource;
@@ -127,7 +127,9 @@ class filter_rtmp extends moodle_text_filter {
                 // If closed captions on by default is set, add track code for captions.
                 if ($CFG->filter_rtmp_default_cc) {
                     // Use HLS source as base for track code filtering.
-                    $hlssource = self::get_hls_source($matches[$i + 1]);
+                    if ($hlssource == '') {
+                        $hlssource = self::get_hls_source($matches[$i + 1]);
+                    }
                     $trackcode = self::get_captions($hlssource);
                     $matches[$i + 1] .= $trackcode;
                 }
@@ -145,10 +147,7 @@ class filter_rtmp extends moodle_text_filter {
                 // Remove "fluid": true (not compatible with RTMP).
                 // Add "width": 400.
                 // Add "techOrder": "flash", "html5" (set priority for Flash and HTML5 playback; required for RTMP).
-                $replacement = 'crossorigin="anonymous" data-setup="{&quot;language&quot;: &quot;en&quot;,
-                        &quot;fluid&quot;: true, &quot;controlBar&quot;: {&quot;fullscreenToggle&quot;: false},
-                        &quot;aspectRatio&quot;: &quot;1:0&quot;, &quot;width&quot;: 400,
-                        &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}';
+                $replacement = 'crossorigin="anonymous" data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true, &quot;controlBar&quot;: {&quot;fullscreenToggle&quot;: false}, &quot;aspectRatio&quot;: &quot;1:0&quot;, &quot;width&quot;: 400, &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}';
                 $matches[$i] = preg_replace($pattern, $replacement, $matches[$i]);
 
                 // Update type for RTMP in child source code; handles .mp4, .flv, and .f4v used in audio src.
