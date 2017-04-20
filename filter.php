@@ -115,7 +115,7 @@ class filter_rtmp extends moodle_text_filter {
 
                 // Replace ampersand character reference with actual '&' in child source code.
                 // VideoJS requires this formatting for RTMP playback.
-                $matches[$i + 1] = str_replace('&amp;', '&', $matches[$i + 1]);
+                //$matches[$i + 1] = str_replace('&amp;', '&', $matches[$i + 1]);
 
                 // If HLS fallback is set, add iOS source.
                 $hlssource = '';
@@ -204,6 +204,23 @@ class filter_rtmp extends moodle_text_filter {
         $name = trim($matches[2]);
         if (empty($name)) {
             $name = 'Media Stream (RTMP)';
+        }
+        
+        // Format URL for VideoJS RTMP (add & and MIME type before username).
+        // Pattern includes everything from beginning of URL through 3 slashes.
+        $pattern = '/([^\/]*)\/\/([^\/]*)\/([^\/]*)\//i';
+        $spliturl = array();
+        if (stripos($matches[1], '.mp4') !== false || stripos($matches[1], '.f4v') !== false) {
+            preg_match($pattern, $matches[1], $spliturl);
+            $matches[1] = preg_replace($pattern, $spliturl[0] . '&mp4:', $matches[1]);
+        }
+        if (stripos($matches[1], '.flv') !== false) {
+            preg_match($pattern, $matches[1], $spliturl);
+            $matches[1] = preg_replace($pattern, $spliturl[0] . '&flv:', $matches[1]);
+        }
+        if (stripos($matches[1], '.mp3') !== false) {
+            preg_match($pattern, $matches[1], $spliturl);
+            $matches[1] = preg_replace($pattern, $spliturl[0] . '&mp3:', $matches[1]);
         }
 
         // Split provided URL into alternatives.
