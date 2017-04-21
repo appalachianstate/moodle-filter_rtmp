@@ -78,6 +78,8 @@ class filter_rtmp extends moodle_text_filter {
                 }
                 $embedmarkers .= "\.flv|\.mp4|\.f4v";
             }
+            
+            // Regex gets string from starting a tag to closing a tag for rtmp single video and playlists links.
             $regex = '~<a\s[^>]*href="(rtmp:\/\/(?:playlist=[^"]*|[^"]*(?:' . $embedmarkers . '))[^"]*)"[^>]*>([^>]*)</a>~is';
             $text = preg_replace_callback($regex, array($this, 'callback'), $text);
         }
@@ -88,22 +90,30 @@ class filter_rtmp extends moodle_text_filter {
         if (!$matches) {
             return $text;
         }
+        
+        // Get default width and height settings.
+        $width = $CFG->media_default_width;
+        $height = $CFG->media_default_height;
 
         for ($i = 0; $i < count($matches); $i++) {
             // Filter video tag with RTMP src.
             if (stripos($matches[$i], '<video') !== false && stripos($matches[$i + 1], '<source src="rtmp') !== false) {
                 // Capture data-setup config. Make sure gets entire config, even if 2 sets of }.
                 $pattern = '/(data-setup[^}]*)(}[^}]*)}/i';
-                if (preg_match($pattern, $matches[$i]) == 0) {
+                if (preg_match($pattern, $matches[$i]) === 0) {
                     $pattern = '/(data-setup[^}]*)}/i';
                 }
 
                 // Add crossorigin config. Adjust data-setup config:
                 // Remove "fluid": true (not compatible with RTMP).
-                // Add "width": 400.
+                // Add height setting.
+                // Add width setting.
                 // Add "techOrder": "flash", "html5" (set priority for Flash and HTML5 playback; required for RTMP).
-                $replacement = 'crossorigin="anonymous" data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;width&quot;: 400, &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}';
+                $replacement = 'crossorigin="anonymous" data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;width&quot;: ' . $width . ', &quot;height&quot;: ' . $height . ', &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}';
                 $matches[$i] = preg_replace($pattern, $replacement, $matches[$i]);
+                
+                // Format RTMP URL for VideoJS - add & and MIME type.
+                $matches[$i + 1] = self::format_url($matches[$i + 1]);
 
                 // Update type for RTMP in child source code.
                 $matches[$i + 1] = str_replace('type="video/', 'type="rtmp/', $matches[$i + 1]);
@@ -112,10 +122,6 @@ class filter_rtmp extends moodle_text_filter {
                 if (stripos($matches[$i + 1], '.mp3') !== false) {
                     $matches[$i + 1] = str_replace('type="audio/', 'type="rtmp/', $matches[$i + 1]);
                 }
-
-                // Replace ampersand character reference with actual '&' in child source code.
-                // VideoJS requires this formatting for RTMP playback.
-                //$matches[$i + 1] = str_replace('&amp;', '&', $matches[$i + 1]);
 
                 // If HLS fallback is set, add iOS source.
                 $hlssource = '';
@@ -145,10 +151,13 @@ class filter_rtmp extends moodle_text_filter {
 
                 // Add crossorigin config. Adjust data-setup config:
                 // Remove "fluid": true (not compatible with RTMP).
-                // Add "width": 400.
+                // Add width setting.
                 // Add "techOrder": "flash", "html5" (set priority for Flash and HTML5 playback; required for RTMP).
-                $replacement = 'crossorigin="anonymous" data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true, &quot;controlBar&quot;: {&quot;fullscreenToggle&quot;: false}, &quot;aspectRatio&quot;: &quot;1:0&quot;, &quot;width&quot;: 400, &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}';
+                $replacement = 'crossorigin="anonymous" data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true, &quot;controlBar&quot;: {&quot;fullscreenToggle&quot;: false}, &quot;aspectRatio&quot;: &quot;1:0&quot;, &quot;width&quot;: ' . $width . ', &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}';
                 $matches[$i] = preg_replace($pattern, $replacement, $matches[$i]);
+                
+                // Format RTMP URL for VideoJS - add & and MIME type.
+                $matches[$i + 1] = self::format_url($matches[$i + 1]);
 
                 // Update type for RTMP in child source code; handles .mp4, .flv, and .f4v used in audio src.
                 if (stripos($matches[$i + 1], '.mp4') !== false) {
@@ -165,10 +174,6 @@ class filter_rtmp extends moodle_text_filter {
                     $matches[$i + 1] = str_replace('type="audio/', 'type="rtmp/', $matches[$i + 1]);
                     $matches[$i + 1] = str_replace('mp4:', 'mp3:', $matches[$i + 1]);
                 }
-
-                // Replace ampersand character reference with actual '&' in child source code.
-                // VideoJS requires this formatting for RTMP playback.
-                $matches[$i + 1] = str_replace('&amp;', '&', $matches[$i + 1]);
 
                 // If HLS fallback is set, add iOS source.
                 if ($CFG->filter_rtmp_hls_fallback) {
@@ -204,23 +209,6 @@ class filter_rtmp extends moodle_text_filter {
         $name = trim($matches[2]);
         if (empty($name)) {
             $name = 'Media Stream (RTMP)';
-        }
-        
-        // Format URL for VideoJS RTMP (add & and MIME type before username).
-        // Pattern includes everything from beginning of URL through 3 slashes.
-        $pattern = '/([^\/]*)\/\/([^\/]*)\/([^\/]*)\//i';
-        $spliturl = array();
-        if (stripos($matches[1], '.mp4') !== false || stripos($matches[1], '.f4v') !== false) {
-            preg_match($pattern, $matches[1], $spliturl);
-            $matches[1] = preg_replace($pattern, $spliturl[0] . '&mp4:', $matches[1]);
-        }
-        if (stripos($matches[1], '.flv') !== false) {
-            preg_match($pattern, $matches[1], $spliturl);
-            $matches[1] = preg_replace($pattern, $spliturl[0] . '&flv:', $matches[1]);
-        }
-        if (stripos($matches[1], '.mp3') !== false) {
-            preg_match($pattern, $matches[1], $spliturl);
-            $matches[1] = preg_replace($pattern, $spliturl[0] . '&mp3:', $matches[1]);
         }
 
         // Split provided URL into alternatives.
@@ -329,6 +317,26 @@ class filter_rtmp extends moodle_text_filter {
         return array($clipurls, $options);
     }
 
+    private static function format_url($match) {
+        // Format URL for VideoJS RTMP (add & and MIME type before username).
+        // Pattern includes everything from beginning of URL through 3 slashes.
+        $pattern = '/([^\/]*)\/\/([^\/]*)\/([^\/]*)\//i';
+        $spliturl = array();
+        if (stripos($match, '.mp4') !== false || stripos($match, '.f4v') !== false) {
+            preg_match($pattern, $match, $spliturl);
+            $match = preg_replace($pattern, $spliturl[0] . '&mp4:', $match);
+        }
+        if (stripos($match, '.flv') !== false) {
+            preg_match($pattern, $match, $spliturl);
+            $match = preg_replace($pattern, $spliturl[0] . '&flv:', $match);
+        }
+        if (stripos($match, '.mp3') !== false) {
+            preg_match($pattern, $match, $spliturl);
+            $match = preg_replace($pattern, $spliturl[0] . '&mp3:', $match);
+        }
+        return $match;
+    }
+    
     /**
      * Get RTMP formatted HLS source for VideoJS.
      *
@@ -407,7 +415,7 @@ class filter_rtmp extends moodle_text_filter {
             case 'fms':
                 $hlsurl = ".m38u";
                 break;
-                // Wowza Streaming Engine (wse).
+            // Wowza Streaming Engine (wse).
             default:
                 $hlsurl = "/playlist.m3u8";
         }
