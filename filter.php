@@ -78,7 +78,7 @@ class filter_rtmp extends moodle_text_filter {
                 }
                 $embedmarkers .= "\.flv|\.mp4|\.f4v";
             }
-            
+
             // Regex gets string from starting a tag to closing a tag for rtmp single video and playlists links.
             $regex = '~<a\s[^>]*href="(rtmp:\/\/(?:playlist=[^"]*|[^"]*(?:' . $embedmarkers . '))[^"]*)"[^>]*>([^>]*)</a>~is';
             $text = preg_replace_callback($regex, array($this, 'callback'), $text);
@@ -90,7 +90,7 @@ class filter_rtmp extends moodle_text_filter {
         if (!$matches) {
             return $text;
         }
-        
+
         // Get default width and height settings.
         $width = $CFG->media_default_width;
         $height = $CFG->media_default_height;
@@ -109,9 +109,11 @@ class filter_rtmp extends moodle_text_filter {
                 // Add height setting.
                 // Add width setting.
                 // Add "techOrder": "flash", "html5" (set priority for Flash and HTML5 playback; required for RTMP).
-                $replacement = 'crossorigin="anonymous" data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;width&quot;: ' . $width . ', &quot;height&quot;: ' . $height . ', &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}';
+                $replacement = 'crossorigin="anonymous" data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;width&quot;: '
+                        . $width . ', &quot;height&quot;: '
+                        . $height . ', &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}';
                 $matches[$i] = preg_replace($pattern, $replacement, $matches[$i]);
-                
+
                 // Format RTMP URL for VideoJS - add & and MIME type.
                 $matches[$i + 1] = self::format_url($matches[$i + 1]);
 
@@ -153,9 +155,10 @@ class filter_rtmp extends moodle_text_filter {
                 // Remove "fluid": true (not compatible with RTMP).
                 // Add width setting.
                 // Add "techOrder": "flash", "html5" (set priority for Flash and HTML5 playback; required for RTMP).
-                $replacement = 'crossorigin="anonymous" data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true, &quot;controlBar&quot;: {&quot;fullscreenToggle&quot;: false}, &quot;aspectRatio&quot;: &quot;1:0&quot;, &quot;width&quot;: ' . $width . ', &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}';
+                $replacement = 'crossorigin="anonymous" data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true, &quot;controlBar&quot;: {&quot;fullscreenToggle&quot;: false}, &quot;aspectRatio&quot;: &quot;1:0&quot;, &quot;width&quot;: '
+                        . $width . ', &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}';
                 $matches[$i] = preg_replace($pattern, $replacement, $matches[$i]);
-                
+
                 // Format RTMP URL for VideoJS - add & and MIME type.
                 $matches[$i + 1] = self::format_url($matches[$i + 1]);
 
@@ -317,26 +320,34 @@ class filter_rtmp extends moodle_text_filter {
         return array($clipurls, $options);
     }
 
-    private static function format_url($match) {
-        // Format URL for VideoJS RTMP (add & and MIME type before username).
+    /**
+     * Format URL for VideoJS RTMP (add & and MIME type before username).
+     *
+     * @access private
+     * @static
+     *
+     * @param string $source
+     * @return string RTMP formatted URL for VideoJS
+     */
+    private static function format_url($source) {
         // Pattern includes everything from beginning of URL through 3 slashes.
         $pattern = '/([^\/]*)\/\/([^\/]*)\/([^\/]*)\//i';
         $spliturl = array();
-        if (stripos($match, '.mp4') !== false || stripos($match, '.f4v') !== false) {
-            preg_match($pattern, $match, $spliturl);
-            $match = preg_replace($pattern, $spliturl[0] . '&mp4:', $match);
+        if (stripos($source, '.mp4') !== false || stripos($source, '.f4v') !== false) {
+            preg_match($pattern, $source, $spliturl);
+            $source = preg_replace($pattern, $spliturl[0] . '&mp4:', $source);
         }
-        if (stripos($match, '.flv') !== false) {
-            preg_match($pattern, $match, $spliturl);
-            $match = preg_replace($pattern, $spliturl[0] . '&flv:', $match);
+        if (stripos($source, '.flv') !== false) {
+            preg_match($pattern, $source, $spliturl);
+            $source = preg_replace($pattern, $spliturl[0] . '&flv:', $source);
         }
-        if (stripos($match, '.mp3') !== false) {
-            preg_match($pattern, $match, $spliturl);
-            $match = preg_replace($pattern, $spliturl[0] . '&mp3:', $match);
+        if (stripos($source, '.mp3') !== false) {
+            preg_match($pattern, $source, $spliturl);
+            $source = preg_replace($pattern, $spliturl[0] . '&mp3:', $source);
         }
-        return $match;
+        return $source;
     }
-    
+
     /**
      * Get RTMP formatted HLS source for VideoJS.
      *
