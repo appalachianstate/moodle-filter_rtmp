@@ -168,14 +168,12 @@ class filter_rtmp extends moodle_text_filter {
                 }
                 if (stripos($matches[$i + 1], '.flv') !== false) {
                     $matches[$i + 1] = str_replace('type="video/', 'type="rtmp/', $matches[$i + 1]);
-                    $matches[$i + 1] = str_replace('mp4:', 'flv:', $matches[$i + 1]);
                 }
                 if (stripos($matches[$i + 1], '.f4v') !== false) {
                     $matches[$i + 1] = str_replace('type="video/', 'type="rtmp/', $matches[$i + 1]);
                 }
                 if (stripos($matches[$i + 1], '.mp3') !== false) {
                     $matches[$i + 1] = str_replace('type="audio/', 'type="rtmp/', $matches[$i + 1]);
-                    $matches[$i + 1] = str_replace('mp4:', 'mp3:', $matches[$i + 1]);
                 }
 
                 // If HLS fallback is set, add iOS source.
