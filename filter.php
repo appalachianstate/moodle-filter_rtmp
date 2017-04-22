@@ -43,7 +43,7 @@ class filter_rtmp extends moodle_text_filter {
      * @see moodle_text_filter::filter()
      */
     public function filter($text, array $options = array()) {
-        global $CFG, $PAGE;
+        global $CFG;
 
         if (!is_string($text) or empty($text)) {
             // Non string data can not be filtered anyway.
