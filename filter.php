@@ -44,6 +44,8 @@ class filter_rtmp extends moodle_text_filter {
      */
     public function filter($text, array $options = array()) {
         global $CFG;
+        
+        $playlist = false;
 
         if (!is_string($text) or empty($text)) {
             // Non string data can not be filtered anyway.
@@ -81,6 +83,9 @@ class filter_rtmp extends moodle_text_filter {
 
             // Regex gets string from starting a tag to closing a tag for rtmp single video and playlists links.
             $regex = '~<a\s[^>]*href="(rtmp:\/\/(?:playlist=[^"]*|[^"]*(?:' . $embedmarkers . '))[^"]*)"[^>]*>([^>]*)</a>~is';
+            if (stripos($text, 'rtmp://playlist') !== false) {
+                $playlist = true;
+            }
             $text = preg_replace_callback($regex, array($this, 'callback'), $text);
         }
 
@@ -189,8 +194,13 @@ class filter_rtmp extends moodle_text_filter {
         foreach ($matches as $match) {
             $filteredtext .= $match;
         }
-
-        return $filteredtext;
+        
+        if (!$playlist) {
+            return $filteredtext;
+        } else {
+            return self::format_for_playlist($filteredtext);
+        }
+        
     }
 
     /**
@@ -451,6 +461,89 @@ class filter_rtmp extends moodle_text_filter {
         // Create track code with corresponding src URL, add to end of sources.
         $trackcode = '<track kind="captions" src="' . $captionfile . '" srclang="en" label="English" default="">';
         return $trackcode;
+    }
+    
+    private static function format_for_playlist($filteredtext) {
+        global $PAGE;
+        $PAGE->requires->js(new moodle_url('/media/player/videojs/amd/src/video-lazy.js'));
+        $PAGE->requires->js(new moodle_url('/filter/rtmp/javascript/videojs.playlist.js'));
+        $PAGE->requires->js(new moodle_url('/filter/rtmp/javascript/filter_rtmp.js'));
+        
+        // Modify HTML for playlist output.
+        $matches = preg_split('/(<video[^>]*>)|(<audio[^>]*>)|(<source[^>]*>)|(<track[^>]*>)|(<\/video[^>]*>)/i', $filteredtext, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+        if (!$matches) {
+            return $filteredtext;
+        }
+        
+        $playlisttracks = array();
+        $videoid = array();
+        for ($i = 0, $j = 0; $i < count($matches); $i++) {
+            if (stripos($matches[$i], '<video') !== false) {
+                preg_match('/(id_[^"]*)/i', $matches[$i], $videoid);
+                $matches[$i] = preg_replace('/(id="[^"]*)/i', 'id="' . $videoid[0] . '-video-playlist', $matches[$i]);
+                //$matches[$i] = str_replace('id="', 'id="video-playlist-', $matches[$i]);
+                $matches[$i] = str_replace('class="', 'class="video-playlist vjs-default-skin ', $matches[$i]);
+            }
+            if (stripos($matches[$i], '<audio') !== false) {
+                // Do nothing?
+            }
+            if (stripos($matches[$i], '<source') !== false) {
+                // Remove from here (may need to move $playlisttrack variable so reachable outside of loop? Or store playlist lis as array (href# or data-index#)?
+                if (stripos($matches[$i], 'playlist.m3u8') === false) {
+                    // Should always be .mp4, .flv, .f4v, or .mp3
+                    $playlisttracks[$j] = $matches[$i];
+                    $j++;
+                }
+                $matches[$i] = '';
+        
+                // Position as first li in playlist div
+                // Unless ios source - then do nothing
+            }
+            if (stripos($matches[$i], '<track') !== false) {
+                //preg_filter('\(<track[^>]*>\\n)\i', '', $matches[$i]);
+                // Remove from here
+                $matches[$i] = '';
+            }
+            if (stripos($matches[$i], '</video') !== false) {
+                if ($playlisttracks) {
+                    // Move ending </div>s after </video> closing tag.
+                    // Add start of <div> for playlist list.
+        
+                    // Need ID from element to concat before id=video-playlist.
+                    $playlistcode = '</video></div></div><div id="' . $videoid[0] . '-video-playlist-vjs-playlist" class="vjs-playlist" style="width:100%"><ul>';
+        
+                    // Convert sources to li elements
+                    for ($m = 0; $m < count($playlisttracks); $m++) {
+                        // FIX src = 1?
+                        $src = array();
+                        preg_match('/(rtmp:[^"]*)/i', $playlisttracks[$m], $src);
+                        $title = 'Throttle';
+                        $playlistcode .= "<li><a class='vjs-track' href='#episode-{$m}' data-index='{$m}' data-src='{$src[0]}'>{$title}</a></li>";
+                    }
+        
+                    // Add closing </ul></div>.
+                    $playlistcode .= '</ul></div>';
+        
+                    // Concat after closing </video> tag in $matches[$i + 1]
+                    $matches[$i] = str_replace('</video>', $playlistcode, $matches[$i]);
+        
+                    // Remove ending </div>s from $matches[$i + 1] - moved to $matches[$i] above
+                    $matches[$i + 1] = str_replace('</div></div>', '', $matches[$i + 1]);
+                }
+            }
+            
+            //if (stripos($matches[$i], '\n') !== false) {
+            // Where do these come from?
+            //$matches[$i] = '';
+            //}
+        }
+        
+        $playlisttext = "";
+        foreach ($matches as $match) {
+            $playlisttext .= $match;
+        }
+        
+        return $playlisttext;
     }
 
     /**
