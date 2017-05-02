@@ -32,6 +32,7 @@
 
 .vjs-playlist ul li {
 	background-color: #2d2d2d;
+	text-align: left;
 	-moz-transition-property: background-color;
 	-webkit-transition-property: background-color;
 	-o-transition-property: background-color;
@@ -65,4 +66,9 @@
 	-webkit-transition-duration: .1s;
 	-o-transition-duration: .1s;
 	transition-duration: .1s;
+}
+
+.vjs-playlist ul li a:hover,
+.vjs-playlist ul li a:focus {
+	color: #fff;
 }
