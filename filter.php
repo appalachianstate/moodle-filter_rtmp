@@ -66,7 +66,7 @@ class filter_rtmp extends moodle_text_filter {
         $this->trusted = !empty($options['noclean']) or !empty($CFG->allowobjectembed);
 
         // Handle all links that contain any 'embeddable' marker text.
-        // (It could do all links, but the embeddable markers thing should make 
+        // (It could do all links, but the embeddable markers thing should make
         // it faster by meaning for most links it doesn't drop into PHP code).
         if (stripos($text, '</a>')) {
             // Get embed markers from RTMP filter settings.
@@ -91,22 +91,23 @@ class filter_rtmp extends moodle_text_filter {
                 $embedmarkers .= "\.flv|\.mp4|\.f4v";
             }
 
-            // Regex gets string from starting a tag to closing a tag for rtmp single video and playlists links.
+            // Regex gets string from starting <a tag to closing </a> tag for rtmp single video and playlists links.
             $regex = '~<a\s[^>]*href="(rtmp:\/\/(?:playlist=[^"]*|[^"]*(?:' . $embedmarkers . '))[^"]*)"[^>]*>([^>]*)</a>~is';
             if (stripos($text, 'rtmp://playlist') !== false) {
                 $playlist = true;
             }
             $newtext = preg_replace_callback($regex, array($this, 'callback'), $text);
-            
+
             if ($newtext == $text || is_null($text)) {
                 return $text;
             }
-            
-            // Set changed text so filter can work on either link tags or video/audio tags.
+
+            // Set changed text to text, so filter can continue work on modifiled <a tags
+            // or already set <video or <audio tags.
             $text = $newtext;
         }
 
-        // Separate text into video, audio and source snippets.
+        // Separate text into <video, <audio and <source snippets.
         $matches = preg_split('/(<video[^>]*>)|(<audio[^>]*>)|(<source[^>]*>)/i', $text, -1,
                 PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
         if (!$matches) {
@@ -122,13 +123,13 @@ class filter_rtmp extends moodle_text_filter {
         if (!is_numeric($height) || $height <= 0) {
             $height = '300';
         }
-        
+
         // Get and verify HLS fallback config.
         $hlsfallback = $CFG->filter_rtmp_hls_fallback;
         if (!is_numeric($hlsfallback) || $hlsfallback <= 0) {
             $hlsfallback = '0';
         }
-        
+
         // Get and verify CC config.
         $defaultcc = $CFG->filter_rtmp_default_cc;
         if (!is_numeric($defaultcc) || $defaultcc <= 0) {
@@ -207,6 +208,7 @@ class filter_rtmp extends moodle_text_filter {
             $filteredtext .= $match;
         }
 
+        // If playlist, more filter work is needed.
         if (!$playlist) {
             return $filteredtext;
         } else {
@@ -251,27 +253,30 @@ class filter_rtmp extends moodle_text_filter {
         // code does not recognise filter options (it's a different kind of
         // option-space) as it can be used in non-filter situations.
         $result = core_media_manager::instance()->embed_alternatives($urls, $name, $width, $height, $options);
-        
-        // Get playlist names if provided, or filenames if not.
+
+        // If a playlist, get playlist names (if provided), or filenames (if not).
         if (count($options['PLAYLIST_NAMES']) > 0 && $options['PLAYLIST_NAMES'][0] !== '') {
             $sources = preg_split('/(<source[^>]*>)/i', $result, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
             if ($sources) {
                 for ($i = 0, $j = 0; $i < count($sources); $i++) {
                     if (stripos($sources[$i], '<source') !== false) {
                         if ($options['PLAYLIST_NAMES'][$j] == '') {
+                            // If array of playlist names is empty, get filename.
                             $filename = array();
                             $path = $urls[$j]->get_path();
                             preg_match('/([^\/]*).mp3|mp4|flv|f4v/i', $path, $filename);
                             $title = $filename[0];
                         } else {
+                            // Otherwise get provided name.
                             $title = $options['PLAYLIST_NAMES'][$j];
                         }
+                        // Add a title attribute to the source tag with the name, so it can be displayed later.
                         $sources[$i] = str_replace('" />', '" title="' . $title . '" />', $sources[$i]);
                         $j++;
                     }
                 }
             }
-            
+
             // Concatenate source snippets.
             $resultwithtitles = "";
             foreach ($sources as $source) {
@@ -368,7 +373,10 @@ class filter_rtmp extends moodle_text_filter {
     }
 
     /**
-     * Format URL for VideoJS RTMP (add & and MIME type before username).
+     * Format URL for VideoJS RTMP.
+     * Add & and MIME type before username.
+     * Change type to rtmp.
+     * Remove '+' for spaces if needed.
      *
      * @access private
      * @static
@@ -384,32 +392,26 @@ class filter_rtmp extends moodle_text_filter {
             preg_match($pattern, $source, $spliturl);
             $source = preg_replace($pattern, $spliturl[0] . '&mp4:', $source);
             $source = str_replace('type="video/', 'type="rtmp/', $source);
-
-            // Replace '+' in file path with space for VideoJS compatibility.
-            if (stripos($source, '+') !== false) {
-                $source = str_replace('+', ' ', $source);
-            }
         }
         if (stripos($source, '.flv') !== false) {
             preg_match($pattern, $source, $spliturl);
             $source = preg_replace($pattern, $spliturl[0] . '&flv:', $source);
             $source = str_replace('type="video/', 'type="rtmp/', $source);
-
-            // Replace '+' in file path with space for VideoJS compatibility.
-            if (stripos($source, '+') !== false) {
-                $source = str_replace('+', ' ', $source);
-            }
         }
         if (stripos($source, '.mp3') !== false) {
             preg_match($pattern, $source, $spliturl);
             $source = preg_replace($pattern, $spliturl[0] . '&mp3:', $source);
             $source = str_replace('type="audio/', 'type="rtmp/', $source);
 
-            // Replace '+' in file path with space for VideoJS compatibility.
+            // If '+' in file path, change mp3 type to mp4 for VideoJS compatibility.
             if (stripos($source, '+') !== false) {
-                $source = str_replace('+', ' ', $source);
                 $source = str_replace('rtmp/mp3', 'rtmp/mp4', $source);
             }
+        }
+
+        // Replace '+' in file path with space for VideoJS compatibility.
+        if (stripos($source, '+') !== false) {
+            $source = str_replace('+', ' ', $source);
         }
         return $source;
     }
@@ -534,29 +536,35 @@ class filter_rtmp extends moodle_text_filter {
 
         $playlisttracks = array();
         $mediaid = array();
+
+        // Prepare to set <video class to include HLS URL type for playlist javascript to use.
         if (in_array('.m38u', $matches)) {
             $hlsclass = 'fms';
         } else {
             $hlsclass = 'wse';
         }
+
         for ($i = 0, $j = 0; $i < count($matches); $i++) {
-            // Format video tag to append '-video-playlist' to id, add playlist classes.
+            // Format video tag to append '-video-playlist' to id, add playlist and HLS classes.
             if (stripos($matches[$i], '<video') !== false) {
                 preg_match('/(id_[^"]*)/i', $matches[$i], $mediaid);
                 $matches[$i] = preg_replace('/(id="[^"]*)/i', 'id="' . $mediaid[0] . '-video-playlist', $matches[$i]);
                 $matches[$i] = str_replace('class="', 'class="video-playlist vjs-default-skin ' . $hlsclass . ' ', $matches[$i]);
             }
 
-            // Format audio tag for audio playlists; change to video tag for playlist player.
+            // Format <audio tag to <video for playlists (works better for playlist).
+            // Append '-video-playlist' to id, add playlist and HLS classes.
+            // Change data-setup to match <video settings.
             if (stripos($matches[$i], '<audio') !== false) {
                 preg_match('/(id_[^"]*)/i', $matches[$i], $mediaid);
                 $matches[$i] = str_replace('<audio', '<video', $matches[$i]);
                 $matches[$i] = preg_replace('/(id="[^"]*)/i', 'id="' . $mediaid[0] . '-video-playlist', $matches[$i]);
                 $matches[$i] = str_replace('class="', 'class="video-playlist vjs-default-skin ' . $hlsclass . ' ', $matches[$i]);
-                $matches[$i] = str_replace('data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true, &quot;controlBar&quot;: {&quot;fullscreenToggle&quot;: false}, &quot;aspectRatio&quot;: &quot;1:0&quot;, &quot;width&quot;: 400, &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}"', 'data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;width&quot;: 400, &quot;height&quot;: 300, &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}"', $matches[$i]);
+                $matches[$i] = str_replace('data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true, &quot;controlBar&quot;: {&quot;fullscreenToggle&quot;: false}, &quot;aspectRatio&quot;: &quot;1:0&quot;, &quot;width&quot;: 400, &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}"',
+                            'data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;width&quot;: 400, &quot;height&quot;: 300, &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}"', $matches[$i]);
             }
 
-            // Move valid sources (not ios fallback) from video/audio tag to playlist div/ul.
+            // Move valid sources (not iOS fallback) from video/audio tag to playlist div/ul.
             if (stripos($matches[$i], '<source') !== false) {
                 if (stripos($matches[$i], 'playlist.m3u8') === false && stripos($matches[$i], '.m38u') === false) {
                     if (stripos($matches[$i], '&') === false) {
@@ -569,31 +577,24 @@ class filter_rtmp extends moodle_text_filter {
                 $matches[$i] = '';
             }
 
-            // Remove track code - will be added by video.playlist.js dynamically.
+            // Remove track code - will be added by video_playlist.js dynamically.
             if (stripos($matches[$i], '<track') !== false) {
                 $matches[$i] = '';
             }
 
-            // Append playlist div with ul/li's to video code.
+            // Append playlist <div with ul/li's to video code.
             if (stripos($matches[$i], '</video>') !== false || stripos($matches[$i], '</audio>') !== false) {
                 if ($playlisttracks) {
-                    if (stripos($matches[$i], '</video>') !== false) {
+                    if (stripos($matches[$i], '</video>') !== false || stripos($matches[$i], '</audio>') !== false) {
+                        // Use </video> instead of </audio>.
                         // Move ending </div>s after </video> closing tag.
                         // Add start of <div> for playlist list.
                         // Need ID from element to concat before id=video-playlist.
                         $playlistcode = '</video></div></div><div id="'
                                 . $mediaid[0] . '-video-playlist-vjs-playlist" class="vjs-playlist" style="width:100%"><ul>';
                     }
-                    if (stripos($matches[$i], '</audio>') !== false) {
-                        // Change </audio> to </video>.
-                        // Move ending </div>s after </audio> closing tag.
-                        // Add start of <div> for playlist list.
-                        // Need ID from element to concat before id=audio-playlist.
-                        $playlistcode = '</video></div></div><div id="'
-                                . $mediaid[0] . '-video-playlist-vjs-playlist" class="vjs-playlist" style="width:100%"><ul>';
-                    }
 
-                    // Convert sources to li elements.
+                    // Convert sources to li elements; include playlist name.
                     for ($m = 0; $m < count($playlisttracks); $m++) {
                         $src = array();
                         preg_match('/(rtmp:[^"]*)/i', $playlisttracks[$m], $src);
@@ -602,7 +603,7 @@ class filter_rtmp extends moodle_text_filter {
                         $title = $titles[2];
                         $playlistcode .= "<li><a class='vjs-track' href='#episode-{$m}' data-index='{$m}' data-src='{$src[0]}'>{$title}</a></li>";
                     }
-                    
+
                     // Reset $playlisttracks and $j in case another playlist in same text area.
                     $playlisttracks = array();
                     $j = 0;
@@ -619,7 +620,7 @@ class filter_rtmp extends moodle_text_filter {
                         $matches[$i + 1] = str_replace('</div></div>', '', $matches[$i + 1]);
                     } else {
                         $matches[$i] = str_replace('</ul></div></div></div>', '</ul></div>', $matches[$i]);
-                    } 
+                    }
                 }
             }
         }

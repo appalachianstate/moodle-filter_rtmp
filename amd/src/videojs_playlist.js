@@ -2,6 +2,8 @@ define(['media_videojs/video-lazy'], function(videojs) {
     videojs.plugin('playlist', function(options) {
 
         var id = this.el().id;
+
+        // Get HLS class for formatting HLS URLs.
         var classes = document.getElementById(id).className;
         var hlsurl;
         if (classes.includes("fms")) {
@@ -14,8 +16,8 @@ define(['media_videojs/video-lazy'], function(videojs) {
         var tracks = document.querySelectorAll("#" + id + "-vjs-playlist .vjs-track"),
         trackCount = tracks.length,
         player = this,
-        currentTrack = tracks[0],
-        index = 0,
+        //currentTrack = tracks[0],
+        //index = 0,
         play = true,
         onTrackSelected = options.onTrackSelected;
 
@@ -31,13 +33,13 @@ define(['media_videojs/video-lazy'], function(videojs) {
 
             // Get new src.
             var src = track.getAttribute('data-src');
-            
-             // Remove previously added captions.
+
+            // Remove previously dynamically added captions.
             var captions = player.remoteTextTracks();
             for (var i = 0; i < captions.length; i++) {
                 player.removeRemoteTextTrack(captions[i]);
             }
-            
+
             // Set up new captions.
             var trackOptions = new Object();
             trackOptions.kind = 'captions';
@@ -46,7 +48,7 @@ define(['media_videojs/video-lazy'], function(videojs) {
             trackOptions.srclang = 'en';
             trackOptions.default = true;
 
-            // Add rtmp and ios sources, captions by MIME.
+            // Add rtmp and iOS sources, captions by MIME.
             if (src.includes(".mp4")) {
                 var ios = src.replace("rtmp", "http");
                 ios = ios.replace("&mp4", "_definst_/mp4");
@@ -75,7 +77,7 @@ define(['media_videojs/video-lazy'], function(videojs) {
                 var vtt = ios.replace("mp4:", "");
                 vtt = vtt.replace("flv" + hlsurl, "vtt");
                 trackOptions.src = vtt;
-                player.addRemoteTextTrack(trackOptions); 
+                player.addRemoteTextTrack(trackOptions);
             }
             else if (src.includes(".f4v")) {
                 var ios = src.replace("rtmp", "http");
@@ -125,13 +127,13 @@ define(['media_videojs/video-lazy'], function(videojs) {
             }
         };
     });
-    // Return videojsplugin;
+    // Return videojsplugin.
 
     // Initialize video.js.
 
     // Get playlist elements on page.
     var videoPlaylistElements = document.getElementsByClassName("video-playlist");
-    
+
     // Get ID(s) and player(s) for all playlists on page.
     if (videoPlaylistElements.length > 0) {
         for (var i = 0; i < videoPlaylistElements.length; i++) {
