@@ -255,7 +255,7 @@ class filter_rtmp extends moodle_text_filter {
         $result = core_media_manager::instance()->embed_alternatives($urls, $name, $width, $height, $options);
 
         // If a playlist, get playlist names (if provided), or filenames (if not).
-        if (count($options['PLAYLIST_NAMES']) > 0 && $options['PLAYLIST_NAMES'][0] !== '') {
+        if (count($options['PLAYLIST_NAMES']) > 0) {
             $sources = preg_split('/(<source[^>]*>)/i', $result, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
             if ($sources) {
                 for ($i = 0, $j = 0; $i < count($sources); $i++) {
@@ -264,7 +264,7 @@ class filter_rtmp extends moodle_text_filter {
                             // If array of playlist names is empty, get filename.
                             $filename = array();
                             $path = $urls[$j]->get_path();
-                            preg_match('/([^\/]*).mp3|mp4|flv|f4v/i', $path, $filename);
+                            preg_match('/([^\/]*)(.mp3|.mp4|.flv|.f4v)/i', $path, $filename);
                             $title = $filename[0];
                         } else {
                             // Otherwise get provided name.
@@ -585,14 +585,12 @@ class filter_rtmp extends moodle_text_filter {
             // Append playlist <div with ul/li's to video code.
             if (stripos($matches[$i], '</video>') !== false || stripos($matches[$i], '</audio>') !== false) {
                 if ($playlisttracks) {
-                    if (stripos($matches[$i], '</video>') !== false || stripos($matches[$i], '</audio>') !== false) {
-                        // Use </video> instead of </audio>.
-                        // Move ending </div>s after </video> closing tag.
-                        // Add start of <div> for playlist list.
-                        // Need ID from element to concat before id=video-playlist.
-                        $playlistcode = '</video></div></div><div id="'
-                                . $mediaid[0] . '-video-playlist-vjs-playlist" class="vjs-playlist" style="width:100%"><ul>';
-                    }
+                    // Use </video> instead of </audio>.
+                    // Move ending </div>s after </video> closing tag.
+                    // Add start of <div> for playlist list.
+                    // Need ID from element to concat before id=video-playlist.
+                    $playlistcode = '</video></div></div><div id="'
+                            . $mediaid[0] . '-video-playlist-vjs-playlist" class="vjs-playlist" style="width:100%"><ul>';
 
                     // Convert sources to li elements; include playlist name.
                     for ($m = 0; $m < count($playlisttracks); $m++) {
