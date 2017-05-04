@@ -16,8 +16,6 @@ define(['media_videojs/video-lazy'], function(videojs) {
         var tracks = document.querySelectorAll("#" + id + "-vjs-playlist .vjs-track"),
         trackCount = tracks.length,
         player = this,
-        //currentTrack = tracks[0],
-        //index = 0,
         play = true,
         onTrackSelected = options.onTrackSelected;
 
@@ -139,7 +137,7 @@ define(['media_videojs/video-lazy'], function(videojs) {
         for (var i = 0; i < videoPlaylistElements.length; i++) {
             var videoId = videoPlaylistElements[i].id;
 
-            videojs(videoId, {}).ready(function(event) {
+            videojs(videoId, {}).ready(function() {
                 var myPlayer = this;
 
                 myPlayer.playlist({

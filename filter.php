@@ -36,6 +36,15 @@ class filter_rtmp extends moodle_text_filter {
     /** @var bool True if currently filtering trusted text */
     private $trusted;
 
+    /** @var bool True if playlist */
+    private $playlist;
+
+    /** @var string video data-setup */
+    private $videodatasetup;
+
+    /** @var string audio data-setup */
+    private $audiodatasetup;
+
     /**
      * Filter media player code to update for RTMP
      *
@@ -45,7 +54,7 @@ class filter_rtmp extends moodle_text_filter {
     public function filter($text, array $options = array()) {
         global $CFG;
 
-        $playlist = false;
+        $this->playlist = false;
 
         if (!is_string($text) or empty($text)) {
             // Non string data can not be filtered anyway.
@@ -94,7 +103,7 @@ class filter_rtmp extends moodle_text_filter {
             // Regex gets string from starting <a tag to closing </a> tag for rtmp single video and playlists links.
             $regex = '~<a\s[^>]*href="(rtmp:\/\/(?:playlist=[^"]*|[^"]*(?:' . $embedmarkers . '))[^"]*)"[^>]*>([^>]*)</a>~is';
             if (stripos($text, 'rtmp://playlist') !== false) {
-                $playlist = true;
+                $this->playlist = true;
             }
             $newtext = preg_replace_callback($regex, array($this, 'callback'), $text);
 
@@ -114,7 +123,7 @@ class filter_rtmp extends moodle_text_filter {
             return $text;
         }
 
-        // Get default width and height settings.
+        // Get and verify default width and height settings.
         $width = $CFG->media_default_width;
         $height = $CFG->media_default_height;
         if (!is_numeric($width) || $width <= 0) {
@@ -123,6 +132,21 @@ class filter_rtmp extends moodle_text_filter {
         if (!is_numeric($height) || $height <= 0) {
             $height = '300';
         }
+
+        // Set VideoJS video data-setup values.
+        // Remove "fluid": true (not compatible with RTMP).
+        // Add width setting.
+        // Add height setting.
+        // Add "techOrder": "flash", "html5" (set priority for Flash and HTML5 playback; required for RTMP).
+        $this->videodatasetup = 'data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;width&quot;: '
+                . $width . ', &quot;height&quot;: ' . $height
+                . ', &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}"';
+
+        // Set VideoJS audio data-setup values.
+        // Add width setting.
+        // Add "techOrder": "flash", "html5" (set priority for Flash and HTML5 playback; required for RTMP).
+        $this->audiodatasetup = 'data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true, &quot;controlBar&quot;: {&quot;fullscreenToggle&quot;: false}, &quot;aspectRatio&quot;: &quot;1:0&quot;, &quot;width&quot;: '
+                . $width . ', &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}"';
 
         // Get and verify HLS fallback config.
         $hlsfallback = $CFG->filter_rtmp_hls_fallback;
@@ -137,67 +161,36 @@ class filter_rtmp extends moodle_text_filter {
         }
 
         for ($i = 0; $i < count($matches); $i++) {
-            // Filter video tag with RTMP src.
-            if (stripos($matches[$i], '<video') !== false && stripos($matches[$i + 1], '<source src="rtmp') !== false) {
-                // Capture data-setup config. Make sure gets entire config, even if 2 sets of }.
-                $pattern = '/(data-setup[^}]*)(}[^}]*)}/i';
-                if (preg_match($pattern, $matches[$i]) === 0) {
-                    $pattern = '/(data-setup[^}]*)}/i';
-                }
-
-                // Add crossorigin config. Adjust data-setup config:
-                // Remove "fluid": true (not compatible with RTMP).
-                // Add height setting.
-                // Add width setting.
-                // Add "techOrder": "flash", "html5" (set priority for Flash and HTML5 playback; required for RTMP).
-                $replacement = 'crossorigin="anonymous" data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;width&quot;: '
-                        . $width . ', &quot;height&quot;: '
-                        . $height . ', &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}';
-                $matches[$i] = preg_replace($pattern, $replacement, $matches[$i]);
-
-                // Format RTMP URL for VideoJS - add & and MIME type.
-                $matches[$i + 1] = self::format_url($matches[$i + 1]);
-
-                // If HLS fallback is set, add iOS source.
-                if ($hlsfallback) {
-                    $hlssource = self::get_hls_source($matches[$i + 1]);
-                    $matches[$i + 1] .= $hlssource;
-                }
-
-                // If closed captions on by default is set, add track code for captions.
-                if ($defaultcc) {
-                    // Use HLS source as base for track code filtering.
-                    if ($hlssource == '') {
-                        $hlssource = self::get_hls_source($matches[$i + 1]);
-                    }
-                    $trackcode = self::get_captions($hlssource);
-                    $matches[$i + 1] .= $trackcode;
-                }
+            if (stripos($matches[$i], '<video') !== false) {
+                // Add crossorigin config. Adjust data-setup config.
+                $replacement = 'crossorigin="anonymous" ' . $this->videodatasetup;
+                $matches[$i] = preg_replace('/(data-setup="[^"]*")/i', $replacement, $matches[$i]);
             }
 
-            // Filter audio tag with RTMP src.
-            if (stripos($matches[$i], '<audio') !== false && stripos($matches[$i + 1], '<source src="rtmp') !== false) {
-                // Capture data-setup config. Make sure gets entire config, even if 2 sets of }.
-                $pattern = '/(data-setup[^}]*)(}[^}]*)}/i';
-                if (preg_match($pattern, $matches[$i]) == 0) {
-                    $pattern = '/(data-setup[^}]*)}/i';
-                }
+            if (stripos($matches[$i], '<audio') !== false) {
+                // Add crossorigin config. Adjust data-setup config.
+                $replacement = 'crossorigin="anonymous" ' . $this->audiodatasetup;
+                $matches[$i] = preg_replace('/(data-setup="[^"]*")/i', $replacement, $matches[$i]);
+            }
 
-                // Add crossorigin config. Adjust data-setup config:
-                // Remove "fluid": true (not compatible with RTMP).
-                // Add width setting.
-                // Add "techOrder": "flash", "html5" (set priority for Flash and HTML5 playback; required for RTMP).
-                $replacement = 'crossorigin="anonymous" data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true, &quot;controlBar&quot;: {&quot;fullscreenToggle&quot;: false}, &quot;aspectRatio&quot;: &quot;1:0&quot;, &quot;width&quot;: '
-                        . $width . ', &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}';
-                $matches[$i] = preg_replace($pattern, $replacement, $matches[$i]);
-
+            if (stripos($matches[$i], '<source') !== false) {
                 // Format RTMP URL for VideoJS - add & and MIME type.
-                $matches[$i + 1] = self::format_url($matches[$i + 1]);
+                $matches[$i] = self::format_url($matches[$i]);
 
                 // If HLS fallback is set, add iOS source.
                 if ($hlsfallback) {
-                    $hlssource = self::get_hls_source($matches[$i + 1]);
-                    $matches[$i + 1] .= $hlssource;
+                    $hlssource = self::get_hls_source($matches[$i]);
+                    $matches[$i] .= $hlssource;
+                }
+
+                // If closed captions on by default is set and parent is video tag, add track code for captions.
+                if (stripos($matches[$i - 1], '<video') !== false && $defaultcc) {
+                    // Use HLS source as base for track code filtering.
+                    if ($hlssource == '') {
+                        $hlssource = self::get_hls_source($matches[$i]);
+                    }
+                    $trackcode = self::get_captions($hlssource);
+                    $matches[$i] .= $trackcode;
                 }
             }
         }
@@ -209,11 +202,11 @@ class filter_rtmp extends moodle_text_filter {
         }
 
         // If playlist, more filter work is needed.
-        if (!$playlist) {
-            return $filteredtext;
-        } else {
-            return self::format_for_playlist($filteredtext);
+        if ($this->playlist) {
+            return self::format_for_playlist($filteredtext, $width);
         }
+
+        return $filteredtext;
     }
 
     /**
@@ -254,8 +247,8 @@ class filter_rtmp extends moodle_text_filter {
         // option-space) as it can be used in non-filter situations.
         $result = core_media_manager::instance()->embed_alternatives($urls, $name, $width, $height, $options);
 
-        // If a playlist, get playlist names (if provided), or filenames (if not).
-        if (count($options['PLAYLIST_NAMES']) > 0) {
+        // Get playlist names (if provided), or filenames (if not).
+        if ($this->playlist && count($options['PLAYLIST_NAMES']) > 0) {
             $sources = preg_split('/(<source[^>]*>)/i', $result, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
             if ($sources) {
                 for ($i = 0, $j = 0; $i < count($sources); $i++) {
@@ -300,15 +293,15 @@ class filter_rtmp extends moodle_text_filter {
      *                                  and an array of names (optional)
      * @uses    $DB, $COURSE, $CFG
      */
-    private static function split_alternatives($combinedurl, &$width, &$height) {
+    private function split_alternatives($combinedurl, &$width, &$height) {
         global $DB, $COURSE, $CFG;
 
         $origurls    = array_map('trim', explode('#', $combinedurl));
-        $width        = 0;
-        $height       = 0;
+        $width       = 0;
+        $height      = 0;
         $clipurls    = array();
         $clipnames   = array();
-        $options      = array();
+        $options     = array();
 
         // First pass through the array to expand any playlist entries
         // and look for height-width parameters.
@@ -386,6 +379,9 @@ class filter_rtmp extends moodle_text_filter {
      */
     private static function format_url($source) {
         // Pattern includes everything from beginning of URL through 3 slashes.
+        // Assumes src URL is formatted 'rtmp://streamingurl/appname/username/...'.
+        // Changes to URL formatted for VideoJS RTMP: 'rtmp://streamingurl/appname/&mp4:username/...'.
+        // Changes MIME type to rtmp.
         $pattern = '/([^\/]*)\/\/([^\/]*)\/([^\/]*)\//i';
         $spliturl = array();
         if (stripos($source, '.mp4') !== false || stripos($source, '.f4v') !== false) {
@@ -430,7 +426,7 @@ class filter_rtmp extends moodle_text_filter {
     private static function get_hls_source($source) {
         global $CFG;
 
-        // Get RTMP formatted source, update src for HLS.
+        // Use RTMP formatted source to update for HLS.
         $hlssource = $source;
         $hlssource = str_replace('src="rtmp', 'src="http', $hlssource);
         $hlssource = str_replace('&', '_definst_/', $hlssource);
@@ -488,7 +484,7 @@ class filter_rtmp extends moodle_text_filter {
     private static function get_captions($hlssource) {
         global $CFG;
 
-        // Get VideoJS formatted HLS source, update src for WebVTT captions (VideoJS).
+        // Use VideoJS formatted HLS source to update src for WebVTT captions.
         $captionfile = str_replace('<source src="', '', $hlssource);
         if (stripos($captionfile, '.mp4') !== false) {
             $captionfile = preg_replace('/(\.mp4[^>]*>)/i', '.vtt', $captionfile);
@@ -523,13 +519,13 @@ class filter_rtmp extends moodle_text_filter {
      *
      * @uses $PAGE
      */
-    private static function format_for_playlist($filteredtext) {
+    private function format_for_playlist($filteredtext, $width) {
         global $PAGE;
         $PAGE->requires->js_call_amd('filter_rtmp/videojs_playlist', 'videojs.plugin');
 
-        // Split text into video, audio, source, track and closing video snippets.
-        $matches = preg_split('/(<video[^>]*>)|(<audio[^>]*>)|(<source[^>]*>)|(<track[^>]*>)|(<\/video[^>]*>)/i', $filteredtext,
-                -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
+        // Split text into <video, <audio, <source, <track and </video> snippets.
+        $matches = preg_split('/(<video[^>]*>)|(<audio[^>]*>)|(<source[^>]*>)|(<track[^>]*>)|(<\/video[^>]*>)/i',
+                $filteredtext, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
         if (!$matches) {
             return $filteredtext;
         }
@@ -560,15 +556,15 @@ class filter_rtmp extends moodle_text_filter {
                 $matches[$i] = str_replace('<audio', '<video', $matches[$i]);
                 $matches[$i] = preg_replace('/(id="[^"]*)/i', 'id="' . $mediaid[0] . '-video-playlist', $matches[$i]);
                 $matches[$i] = str_replace('class="', 'class="video-playlist vjs-default-skin ' . $hlsclass . ' ', $matches[$i]);
-                $matches[$i] = str_replace('data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true, &quot;controlBar&quot;: {&quot;fullscreenToggle&quot;: false}, &quot;aspectRatio&quot;: &quot;1:0&quot;, &quot;width&quot;: 400, &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}"',
-                            'data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;width&quot;: 400, &quot;height&quot;: 300, &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}"', $matches[$i]);
+                $matches[$i] = str_replace($this->audiodatasetup, $this->videodatasetup, $matches[$i]);
             }
 
             // Move valid sources (not iOS fallback) from video/audio tag to playlist div/ul.
             if (stripos($matches[$i], '<source') !== false) {
                 if (stripos($matches[$i], 'playlist.m3u8') === false && stripos($matches[$i], '.m38u') === false) {
                     if (stripos($matches[$i], '&') === false) {
-                        // Reformat source URL for RTMP.
+                        // Only the first source will be formatted for VideoJS RTMP.
+                        // Reformat subsequent source URL for RTMP.
                         $matches[$i] = self::format_url($matches[$i]);
                     }
                     $playlisttracks[$j] = $matches[$i];
@@ -590,7 +586,8 @@ class filter_rtmp extends moodle_text_filter {
                     // Add start of <div> for playlist list.
                     // Need ID from element to concat before id=video-playlist.
                     $playlistcode = '</video></div></div><div id="'
-                            . $mediaid[0] . '-video-playlist-vjs-playlist" class="vjs-playlist" style="width:100%"><ul>';
+                            . $mediaid[0] . '-video-playlist-vjs-playlist" class="vjs-playlist" style="width:'
+                            . $width . 'px"><ul>';
 
                     // Convert sources to li elements; include playlist name.
                     for ($m = 0; $m < count($playlisttracks); $m++) {

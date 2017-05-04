@@ -1,17 +1,16 @@
 .video-js,
 .vjs-control-bar {
-    -moz-border-top-left-radius: 5px;
-    border-top-left-radius: 5px;
-    -moz-border-top-right-radius: 5px;
-    border-top-right-radius: 5px;
-    -moz-border-bottom-left-radius: 0px;
-    border-bottom-left-radius: 0px;
-    -moz-border-bottom-right-radius: 0px;
-    border-bottom-right-radius: 0px;
+    -moz-border-top-left-radius: 0;
+    border-top-left-radius: 0;
+    -moz-border-top-right-radius: 0;
+    border-top-right-radius: 0;
+    -moz-border-bottom-left-radius: 0;
+    border-bottom-left-radius: 0;
+    -moz-border-bottom-right-radius: 0;
+    border-bottom-right-radius: 0;
 }
 
 .vjs-playlist {
-    max-width: 400px;
     background-color: #2d2d2d;
     overflow-y: scroll;
     max-height: 150px;
@@ -21,6 +20,7 @@
 .vjs-track {
     color:#fff;
 }
+
 .vjs-track:hover {
     color: #f7f9fc;
 }
@@ -48,6 +48,7 @@
     display: block;
     width: 100%;
 }
+
 .currentTrack {
     color: gray;
 }
