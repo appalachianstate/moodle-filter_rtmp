@@ -611,7 +611,7 @@ class filter_rtmp extends moodle_text_filter {
                     // Add start of <div> for playlist list.
                     // Need ID from element to concat before id=video-playlist.
                     $playlistcode = '</video></div></div><div id="'
-                            . $mediaid[0] . '-video-playlist-vjs-playlist" class="vjs-playlist" style="width:'
+                            . $mediaid[0] . '-video-playlist-vjs-playlist" class="vjs-playlist" style="max-width:'
                             . $width . 'px"><ul>';
 
                     // Convert sources to li elements; include playlist name.

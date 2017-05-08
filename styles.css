@@ -12,7 +12,7 @@
 
 .vjs-playlist {
     background-color: #2d2d2d;
-    overflow-y: scroll;
+    overflow-y: auto;
     max-height: 150px;
     margin: auto;
 }
