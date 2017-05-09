@@ -171,9 +171,13 @@ class filter_rtmp extends moodle_text_filter {
                 $matches[$i] = self::format_url($matches[$i]);
 
                 // If HLS fallback is set, add iOS source.
+                $hlssource = '';
                 if ($hlsfallback) {
-                    $hlssource = self::get_hls_source($matches[$i]);
-                    $matches[$i] .= $hlssource;
+                    // FLV is not supported by iOS.
+                    if (stripos($matches[$i], '.flv') === false) {
+                        $hlssource = self::get_hls_source($matches[$i]);
+                        $matches[$i] .= $hlssource;
+                    }
                 }
 
                 // If closed captions on by default is set and parent is video tag, add track code for captions.
@@ -453,7 +457,7 @@ class filter_rtmp extends moodle_text_filter {
 
         // Use RTMP formatted source to update for HLS.
         $hlssource = $source;
-        $hlssource = str_replace('src="rtmp', 'src="http', $hlssource);
+        $hlssource = str_replace('src="rtmp', 'src="https', $hlssource);
         $hlssource = str_replace('&', '_definst_/', $hlssource);
 
         // Prepare HLS URL style based on configured setting.

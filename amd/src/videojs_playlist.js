@@ -48,7 +48,7 @@ define(['media_videojs/video-lazy'], function(videojs) {
 
             // Add rtmp and iOS sources, captions by MIME.
             if (src.includes(".mp4")) {
-                var ios = src.replace("rtmp", "http");
+                var ios = src.replace("rtmp", "https");
                 ios = ios.replace("&mp4", "_definst_/mp4");
                 ios = ios.replace(".mp4", ".mp4" + hlsurl);
 
@@ -63,22 +63,19 @@ define(['media_videojs/video-lazy'], function(videojs) {
                 player.addRemoteTextTrack(trackOptions);
             }
             else if (src.includes(".flv")) {
-                var ios = src.replace("rtmp", "http");
-                ios = ios.replace("&flv", "_definst_/mp4");
-                ios = ios.replace(".flv", ".flv" + hlsurl);
-
+                // FLV is not supported by iOS.
                 player.src([
-                            { type: "rtmp/x-flv", src: src },
-                            { type: "video/mp4", src: ios }
+                            { type: "rtmp/x-flv", src: src }
                             ]);
 
-                var vtt = ios.replace("mp4:", "");
-                vtt = vtt.replace("flv" + hlsurl, "vtt");
+                var vtt = src.replace("rtmp", "https");
+                vtt = vtt.replace("&flv:", "_definst_/");
+                vtt = vtt.replace(".flv", ".vtt");
                 trackOptions.src = vtt;
                 player.addRemoteTextTrack(trackOptions);
             }
             else if (src.includes(".f4v")) {
-                var ios = src.replace("rtmp", "http");
+                var ios = src.replace("rtmp", "https");
                 ios = ios.replace("&mp4", "_definst_/mp4");
                 ios = ios.replace(".f4v", ".f4v" + hlsurl);
 
@@ -93,7 +90,7 @@ define(['media_videojs/video-lazy'], function(videojs) {
                 player.addRemoteTextTrack(trackOptions);
             }
             else if (src.includes(".mp3")) {
-                var ios = src.replace("rtmp", "http");
+                var ios = src.replace("rtmp", "https");
                 ios = ios.replace("&mp3", "_definst_/mp3");
                 ios = ios.replace(".mp3", ".mp3" + hlsurl);
 
