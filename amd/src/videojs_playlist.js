@@ -6,7 +6,7 @@ define(['media_videojs/video-lazy'], function(videojs) {
         // Get HLS class for formatting HLS URLs.
         var classes = document.getElementById(id).className;
         var hlsurl;
-        if (classes.includes("fms")) {
+        if (classes.indexOf("fms") != -1) {
             hlsurl = ".m38u";
         } else {
             hlsurl = "/playlist.m3u8";
@@ -47,7 +47,7 @@ define(['media_videojs/video-lazy'], function(videojs) {
             trackOptions.default = true;
 
             // Add rtmp and iOS sources, captions by MIME.
-            if (src.includes(".mp4")) {
+            if (src.indexOf(".mp4") != -1) {
                 var ios = src.replace("rtmp", "https");
                 ios = ios.replace("&mp4", "_definst_/mp4");
                 ios = ios.replace(".mp4", ".mp4" + hlsurl);
@@ -62,7 +62,7 @@ define(['media_videojs/video-lazy'], function(videojs) {
                 trackOptions.src = vtt;
                 player.addRemoteTextTrack(trackOptions);
             }
-            else if (src.includes(".flv")) {
+            else if (src.indexOf(".flv") != -1) {
                 // FLV is not supported by iOS.
                 player.src([
                             { type: "rtmp/x-flv", src: src }
@@ -74,7 +74,7 @@ define(['media_videojs/video-lazy'], function(videojs) {
                 trackOptions.src = vtt;
                 player.addRemoteTextTrack(trackOptions);
             }
-            else if (src.includes(".f4v")) {
+            else if (src.indexOf(".f4v") != -1) {
                 var ios = src.replace("rtmp", "https");
                 ios = ios.replace("&mp4", "_definst_/mp4");
                 ios = ios.replace(".f4v", ".f4v" + hlsurl);
@@ -89,7 +89,7 @@ define(['media_videojs/video-lazy'], function(videojs) {
                 trackOptions.src = vtt;
                 player.addRemoteTextTrack(trackOptions);
             }
-            else if (src.includes(".mp3")) {
+            else if (src.indexOf(".mp3") != -1) {
                 var ios = src.replace("rtmp", "https");
                 ios = ios.replace("&mp3", "_definst_/mp3");
                 ios = ios.replace(".mp3", ".mp3" + hlsurl);
