@@ -41,4 +41,6 @@ if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_configselect(  'filter_rtmp_hls_urlfmt',
             get_string('rtmp_hls_urlfmt', 'filter_rtmp'), '', 'wowza',
       array('wse' => 'Wowza', 'fms' => 'Adobe FMS')));
+    $settings->add(new admin_setting_configcheckbox('filter_rtmp_https',
+            get_string('rtmp_https', 'filter_rtmp'), '', 0));
 }

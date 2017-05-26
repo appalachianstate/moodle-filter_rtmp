@@ -151,6 +151,12 @@ class filter_rtmp extends moodle_text_filter {
         if (!is_numeric($defaultcc) || $defaultcc <= 0) {
             $defaultcc = '0';
         }
+        
+        // Get and verify HTTPS config.
+        $https = $CFG->filter_rtmp_https;
+        if (!is_numeric($https) || $https <= 0) {
+            $https = '0';
+        }
 
         // Format <video, <audio and <source tags.
         for ($i = 0; $i < count($matches); $i++) {
@@ -175,7 +181,7 @@ class filter_rtmp extends moodle_text_filter {
                 if ($hlsfallback) {
                     // FLV is not supported by iOS.
                     if (stripos($matches[$i], '.flv') === false) {
-                        $hlssource = self::get_hls_source($matches[$i]);
+                        $hlssource = self::get_hls_source($matches[$i], $https);
                         $matches[$i] .= $hlssource;
                     }
                 }
@@ -184,7 +190,7 @@ class filter_rtmp extends moodle_text_filter {
                 if (stripos($matches[$i - 1], '<video') !== false && $defaultcc) {
                     // Use HLS source as base for track code filtering.
                     if ($hlssource == '') {
-                        $hlssource = self::get_hls_source($matches[$i]);
+                        $hlssource = self::get_hls_source($matches[$i], $https);
                     }
                     $trackcode = self::get_captions($hlssource);
                     $matches[$i] .= $trackcode;
@@ -452,12 +458,17 @@ class filter_rtmp extends moodle_text_filter {
      *
      * @uses $CFG
      */
-    private static function get_hls_source($source) {
+    private static function get_hls_source($source, $https) {
         global $CFG;
+        
+        $protocol = 'http';
+        if ($https) {
+            $protocol = 'https';
+        }
 
         // Use RTMP formatted source to update for HLS.
         $hlssource = $source;
-        $hlssource = str_replace('src="rtmp', 'src="https', $hlssource);
+        $hlssource = str_replace('src="rtmp', 'src="' . $protocol, $hlssource);
         $hlssource = str_replace('&', '_definst_/', $hlssource);
 
         // Prepare HLS URL style based on configured setting.
