@@ -31,5 +31,5 @@ $string['rtmp_audio'] = 'Filter audio (.mp3)';
 $string['rtmp_video'] = 'Filter video (.flv|.mp4|.f4v)';
 $string['rtmp_defcc'] = 'Closed captions on by default';
 $string['rtmp_hls_fallback'] = 'Fallback to HLS';
-$string['rtmp_hls_urlfmt'] = 'HLS url style';
+$string['rtmp_hls_urlfmt'] = 'HLS/captions url style';
 $string['rtmp_https'] = 'HTTPS';
