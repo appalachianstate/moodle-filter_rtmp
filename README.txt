@@ -33,6 +33,29 @@
  notifications admin page to confirm installation. Select which of the
  the players (audio or video) you want enabled for filtering.
  
+ 
+ SETTINGS
+ --------
+ Filter audio (.mp3): .mp3 files inserted as links, audio, or video will be rendered in a VideoJS player.
+ Filter video (.flv|.mp4|.f4v): .flv, .mp4, and .f4v files inserted as links, audio, or video will be rendered in a VideoJS player.
+ Closed captions on by default: If enabled, the filter will automatically add track files for captions.
+ * Captions must be web video text track (WebVTT) files.
+ * WebVTT captions must be enabled on the streaming server application.
+ * For Wowza, caption files must have same name and location as corresponding media file.
+ * For Adobe FMS, caption files must have same name and location, in a 'vtt' subdirectory, as corresponding media file.
+ Fallback to HLS: If enabled, the filter will automatically add HLS sources.
+ HLS/Captions URL style: Select the streaming server media engine for corresponding HLS and caption URL formatting.
+ * Wowza: .mp4/playlist.m3u8
+ * Adobe FMS: .mp4.m3u8
+ HTTPS: If enabled, the filter will automatically use https protocol for HLS and caption URLs. 
+ Note that if Moodle uses HTTPS, the streaming server will also need to use HTTPS, so HLS and caption URLs will not be blocked.
+ CORS: The filter will automatically set the cross-origin resource sharing attribute to anonymous. 
+ Note that if Moodle is on a different domain than the streaming server, CORS will need to be enabled on the streaming server application.
+ Use Flash fallback: Enable in VideoJS player settings for .flv files to work.
+ Compatibility
+ * .mp3 file inserted as video with captions will not play on iOS.
+ * .flv file will not play on iOS.
+ 
 
  APACHE LICENSE, VERSION 2.0
  ---------------------------

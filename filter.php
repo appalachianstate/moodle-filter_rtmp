@@ -122,6 +122,8 @@ class filter_rtmp extends moodle_text_filter {
             return $text;
         }
         
+        $videotag = '';
+        
         // Format <video, <audio and <source tags.
         for ($i = 0; $i < count($matches); $i++) {
             if (stripos($matches[$i], '<video') !== false) {
@@ -159,7 +161,7 @@ class filter_rtmp extends moodle_text_filter {
             }
             
             if (stripos($matches[$i], '</video') !== false) {
-                unset($videotag);
+                $videotag = '';
             }
         }
 
@@ -463,12 +465,11 @@ class filter_rtmp extends moodle_text_filter {
      * Remove '+' for spaces if needed.
      *
      * @access private
-     * @static
      *
      * @param string $source
      * @return string RTMP formatted URL for VideoJS
      */
-    private static function format_url($source) {
+    private function format_url($source) {
         // Pattern includes everything from beginning of URL through 3 slashes.
         // Assumes src URL is formatted 'rtmp://streamingurl/appname/username/...'.
         // Changes to URL formatted for VideoJS RTMP: 'rtmp://streamingurl/appname/&mp4:username/...'.
@@ -511,14 +512,13 @@ class filter_rtmp extends moodle_text_filter {
      * Get RTMP formatted HLS source for VideoJS.
      *
      * @access private
-     * @static
      *
      * @param   string    $source
      * @return  string    RTMP formatted HLS source code
      *
      * @uses $CFG
      */
-    private static function get_hls_source($source) {
+    private function get_hls_source($source) {
         global $CFG;
 
         // Use RTMP formatted source to update for HLS.
@@ -563,14 +563,13 @@ class filter_rtmp extends moodle_text_filter {
      * Get RTMP formatted track code for VideoJS.
      *
      * @access private
-     * @static
      *
      * @param   string    $hlssource
      * @return  string    RTMP formatted track code
      *
      * @uses $CFG
      */
-    private static function get_captions($hlssource) {
+    private function get_captions($hlssource) {
         global $CFG;
 
         // Use VideoJS formatted HLS source to update src for WebVTT captions.
@@ -610,7 +609,6 @@ class filter_rtmp extends moodle_text_filter {
      * Format code for playlist for VideoJS.
      *
      * @access private
-     * @static
      *
      * @param   string    $filteredtext
      * @return  string    playlist formatted code
