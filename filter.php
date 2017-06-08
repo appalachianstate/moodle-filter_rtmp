@@ -57,6 +57,10 @@ class filter_rtmp extends moodle_text_filter {
     private $defaultwidth;
     
     private $defaultheight;
+    
+    private $videoclass;
+    
+    private $audioclass;
 
     /**
      * Filter media player code to update for RTMP
@@ -172,7 +176,7 @@ class filter_rtmp extends moodle_text_filter {
         }
 
         // If filtered text has any playlist content, prepare to format it.
-        if (stripos($filteredtext, 'class="video-js playlist') !== false) {
+        if (preg_match('/(<video|<audio)[^>]*class="[^"]*\splaylist/i', $filteredtext) == 1) {
             // Reset $matches.
             $matches = array();
 
@@ -185,7 +189,7 @@ class filter_rtmp extends moodle_text_filter {
 
             // Format playlist designated text for playlist.
             for ($i = 0; $i < count($matches); $i++) {
-                if (stripos($matches[$i], 'class="video-js playlist') !== false) {
+                if (preg_match('/(<video|<audio)[^>]*class="[^"]*\splaylist/i', $matches[$i]) == 1) {
                     $newmatch = self::format_for_playlist($matches[$i]);
                     
                     // If <video or <audio code was modified for playlist, continue formatting for playlist.
@@ -248,11 +252,15 @@ class filter_rtmp extends moodle_text_filter {
         // If snippet has more than one source, it is probably a playlist.
         // Add playlist class so we can format later.
         if (substr_count($result, '<source') > 1) {
-            $result = str_replace('class="video-js', 'class="video-js playlist', $result);
+            if (stripos($result, '<video') !== false) {
+                $result = str_replace('class="' . $this->videoclass, 'class="' . $this->videoclass . ' playlist', $result);
+            } else {
+                $result = str_replace('class="' . $this->audioclass, 'class="' . $this->audioclass . ' playlist', $result);
+            }
         }
 
         // Get playlist names (if provided), or filenames (if not).
-        if (stripos($result, 'class="video-js playlist') !== false) {
+        if (preg_match('/(<video|<audio)[^>]*class="[^"]*\splaylist/i', $result) == 1) {
             $sources = preg_split('/(<source[^>]*>)/i', $result, -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
             if ($sources) {
                 for ($i = 0, $j = 0; $i < count($sources); $i++) {
@@ -388,10 +396,11 @@ class filter_rtmp extends moodle_text_filter {
         
         // Get and verify default width and height settings.
         $this->defaultwidth = $CFG->media_default_width;
-        $this->defaultheight = $CFG->media_default_height;
         if (!is_numeric($this->defaultwidth) || $this->defaultwidth <= 0) {
             $this->defaultwidth = 400;
         }
+        
+        $this->defaultheight = $CFG->media_default_height;
         if (!is_numeric($this->defaultheight) || $this->defaultheight <= 0) {
             $this->defaultheight = 300;
         }
@@ -443,6 +452,21 @@ class filter_rtmp extends moodle_text_filter {
         $this->defaultcc = $CFG->filter_rtmp_default_cc;
         if (!is_numeric($this->defaultcc) || $this->defaultcc < 0) {
             $this->defaultcc = 0;
+        }
+        
+        // Get and verify video and audio CSS class config.
+        // VideoJS needs video-js class to display properly.
+        // See https://tracker.moodle.org/browse/MDL-58674.
+        $this->videoclass = get_config('media_videojs', 'videocssclass');
+        if (preg_match('/(\svideo-js|video-js\s|\bvideo-js\b)/i', $this->videoclass) !== 1) {
+            $this->videoclass .= ' video-js';
+            set_config('videocssclass', $this->videoclass);
+        }
+
+        $this->audioclass = get_config('media_videojs', 'audiocssclass');
+        if (preg_match('/(\svideo-js|video-js\s|\bvideo-js\b)/i', $this->audioclass) !== 1) {
+            $this->audioclass .= ' video-js';
+            set_config('audiocssclass', $this->audioclass);
         }
     }
     
@@ -525,7 +549,7 @@ class filter_rtmp extends moodle_text_filter {
         $hlssource = $source;
         $hlssource = str_replace('src="rtmp', 'src="' . $this->protocol, $hlssource);
 
-        if (stripos($this->hlsurl, 'playlist') !== false) {
+        if (stripos($this->hlsurl, 'playlist.m3u8') !== false) {
             $hlssource = str_replace('&', '_definst_/', $hlssource);
         } else {
             $hlssource = str_replace('&', '', $hlssource);
@@ -593,7 +617,7 @@ class filter_rtmp extends moodle_text_filter {
         }
         
         // If Adobe FMS, add vtt subdirectory to src.
-        if (stripos($captionfile, 'playlist') === false) {
+        if (stripos($captionfile, 'playlist.m3u8') === false) {
             $filename = array();
             if (preg_match('/\/[^\/]*\.vtt$/i', $captionfile, $filename)) {
                 $captionfile = preg_replace('/\/[^\/]*\.vtt$/i', '/vtt' . $filename[0], $captionfile);
