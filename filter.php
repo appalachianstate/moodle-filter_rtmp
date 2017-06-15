@@ -41,25 +41,35 @@ class filter_rtmp extends moodle_text_filter {
 
     /** @var string audio data-setup */
     private $audiodatasetup;
-    
+
+    /** @var string http or https */
     private $protocol;
-    
+
+    /** @var string hls fallback enabled */
     private $hlsfallback;
-    
+
+    /** @var string hls url style */
     private $hlsurl;
-    
+
+    /** @var string captions enabled */
     private $defaultcc;
-    
+
+    /** @var string audio filtering enabled */
     private $enableaudio;
-    
+
+    /** @var string video filtering enabled */
     private $enablevideo;
-    
+
+    /** @var string default player width */
     private $defaultwidth;
-    
+
+    /** @var string default player height */
     private $defaultheight;
-    
+
+    /** @var string video css classes */
     private $videoclass;
-    
+
+    /** @var string audio css classes */
     private $audioclass;
 
     /**
@@ -460,13 +470,13 @@ class filter_rtmp extends moodle_text_filter {
         $this->videoclass = get_config('media_videojs', 'videocssclass');
         if (preg_match('/(\svideo-js|video-js\s|\bvideo-js\b)/i', $this->videoclass) !== 1) {
             $this->videoclass .= ' video-js';
-            set_config('videocssclass', $this->videoclass);
+            set_config('videocssclass', $this->videoclass, 'media_videojs');
         }
 
         $this->audioclass = get_config('media_videojs', 'audiocssclass');
         if (preg_match('/(\svideo-js|video-js\s|\bvideo-js\b)/i', $this->audioclass) !== 1) {
             $this->audioclass .= ' video-js';
-            set_config('audiocssclass', $this->audioclass);
+            set_config('audiocssclass', $this->audioclass, 'media_videojs');
         }
     }
     
@@ -653,6 +663,8 @@ class filter_rtmp extends moodle_text_filter {
 
         $playlisttracks = array();
         $mediaid = array();
+        $sources = 0;
+        $tracks = 0;
 
         for ($i = 0, $j = 0; $i < count($matches); $i++) {
             // Format video tag to append '-video-playlist' to id, add playlist and HLS classes.
@@ -672,28 +684,43 @@ class filter_rtmp extends moodle_text_filter {
                 $matches[$i] = str_replace('class="', 'class="video-playlist vjs-default-skin ', $matches[$i]);
                 $matches[$i] = str_replace($this->audiodatasetup, $this->videodatasetup, $matches[$i]);
             }
-            
+
             // Move valid sources (not iOS fallback) from video tag to playlist div/ul.
             if (stripos($matches[$i], '<source') !== false) {
+                
+                
                 // Only process source if it is enabled media type.
                 if (($this->enablevideo && preg_match('(.mp4|.flv|.f4v)', $matches[$i]) === 1) || ($this->enableaudio && preg_match('(.mp3)', $matches[$i]) === 1)) {
+                    // Keep count of sources so first file can be embedded in playlist player.
+                    $sources++;
+                    
                     // Only process source if it is not ios source - these will be added with playlist JS.
                     if (stripos($matches[$i], '.m3u8') === false) {
-                        if (stripos($matches[$i], '&') === false) {
+                        //if (stripos($matches[$i], '&') === false) {
                             // Only the first source will be formatted for VideoJS RTMP.
                             // Reformat subsequent source URLs for RTMP.
-                            $matches[$i] = self::format_url($matches[$i]);
-                        }
+                            //$matches[$i] = self::format_url($matches[$i]);
+                        //}
                         $playlisttracks[$j] = $matches[$i];
                         $j++;
                     }
                 }
-                $matches[$i] = '';
+                
+                // Keep first source and related resources for intial playlist player.
+                if ($sources != 1 && ($sources != 2)) {
+                    // Remove subsequent sources - they will be added by video_playlist.js dynamically.
+                    $matches[$i] = '';
+                }
             }
 
-            // Remove track code - will be added by video_playlist.js dynamically.
             if (stripos($matches[$i], '<track') !== false) {
-                $matches[$i] = '';
+                // Keep count of tracks so first file can be embedded in playlist player.
+                $tracks++;
+                
+                // Remove subsequent tracks - they will be added by video_playlist.js dynamically.
+                if ($tracks != 1) {
+                    $matches[$i] = '';
+                }
             }
 
             // Append playlist <div with ul/li's to video code.

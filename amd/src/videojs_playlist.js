@@ -117,7 +117,7 @@ define(['media_videojs/video-lazy'], function(videojs) {
                                 // Adobe FMS HLS URL format.
                                 ios = ios.replace("&", "");
                             }
-                            ios = ios.replace(".mp4", ".mp4" + args.hlsurl);
+                            ios = ios.replace(".f4v", ".f4v" + args.hlsurl);
 
                             player.src([
                                 { type: "rtmp/mp4", src: src },
