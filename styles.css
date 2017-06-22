@@ -25,7 +25,7 @@
     color: #f7f9fc;
 }
 
-.vjs-playlist ul{
+.vjs-playlist ul {
     padding: 0;
     list-style: none;
 }
@@ -49,14 +49,6 @@
     width: 100%;
 }
 
-.currentTrack {
-    color: gray;
-}
-
-.currentTrack {
-    background-color:#373737;
-}
-
 .vjs-playlist ul li:hover {
     background-color: #373737;
     -moz-transition-property: background-color;
@@ -72,4 +64,12 @@
 .vjs-playlist ul li a:hover,
 .vjs-playlist ul li a:focus {
     color: #fff;
+}
+
+.currentTrack {
+    color: gray;
+}
+
+.currentTrack {
+    background-color:#373737;
 }

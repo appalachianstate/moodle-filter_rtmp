@@ -59,6 +59,9 @@ class filter_rtmp extends moodle_text_filter {
 
     /** @var string video filtering enabled */
     private $enablevideo;
+    
+    /** @var string limit size */
+    private $limitsize;
 
     /** @var string default player width */
     private $defaultwidth;
@@ -206,7 +209,12 @@ class filter_rtmp extends moodle_text_filter {
                     if ($newmatch != $matches[$i]) {
                         $matches[$i] = $newmatch;
                         // Remove ending </div>s from $matches[$i + 1] - moved to $matches[$i] in playlist formatting.
-                        $matches[$i + 1] = str_replace('</div></div>', '', $matches[$i + 1]);
+                        if ($this->limitsize) {
+                            $matches[$i + 1] = str_replace('</div></div>', '', $matches[$i + 1]);
+                        } else {
+                            $matches[$i + 1] = str_replace('</div>', '', $matches[$i + 1]);
+                        }
+                        
                     } 
                 }
             }
@@ -395,13 +403,19 @@ class filter_rtmp extends moodle_text_filter {
         // Get and verify audio config.
         $this->enableaudio = $CFG->filter_rtmp_enable_audio;
         if (!is_numeric($this->enableaudio) || $this->enableaudio < 0) {
-            $this->enableaudio = 0;
+            $this->enableaudio = 1;
         }
         
         // Get and verify video config.
         $this->enablevideo = $CFG->filter_rtmp_enable_video;
         if (!is_numeric($this->enablevideo) || $this->enablevideo < 0) {
-            $this->enablevideo = 0;
+            $this->enablevideo = 1;
+        }
+        
+        // Get and verify limit size config.
+        $this->limitsize = get_config('media_videojs', 'limitsize');
+        if (!is_numeric($this->limitsize) || $this->limitsize < 0) {
+            $this->limitsize = 1;
         }
         
         // Get and verify default width and height settings.
@@ -420,17 +434,18 @@ class filter_rtmp extends moodle_text_filter {
         // Add width setting.
         // Add height setting.
         // Add "techOrder": "flash", "html5" (set priority for Flash and HTML5 playback; required for RTMP).
-        $this->videodatasetup = 'data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;width&quot;: '
-                . $this->defaultwidth . ', &quot;height&quot;: ' . $this->defaultheight
-                . ', &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}"';
-                
+        $this->videodatasetup = 'data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}"';
+        
         // Set VideoJS audio data-setup values.
         // Add width setting.
         // Add "techOrder": "flash", "html5" (set priority for Flash and HTML5 playback; required for RTMP).
-        $this->audiodatasetup = 'data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true,'
-                . '&quot;controlBar&quot;: {&quot;fullscreenToggle&quot;: false}, &quot;aspectRatio&quot;: &quot;1:0&quot;,'
-                . '&quot;width&quot;: ' . $this->defaultwidth . ', &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}"';
-                                
+        $this->audiodatasetup = 'data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true, &quot;controlBar&quot;: {&quot;fullscreenToggle&quot;: false}, &quot;aspectRatio&quot;: &quot;1:0&quot;, &quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}"';
+        
+        if ($this->limitsize) {
+            $this->videodatasetup = str_replace('}"',', &quot;width&quot;: ' . $this->defaultwidth . ', &quot;height&quot;: ' . $this->defaultheight . '}"', $this->videodatasetup);
+            $this->audiodatasetup = str_replace('}"',', &quot;width&quot;: ' . $this->defaultwidth . '}"', $this->audiodatasetup);
+        }
+                 
         // Get and verify HTTPS config.
         $https = $CFG->filter_rtmp_https;
         if (!is_numeric($https) || $https < 0) {
@@ -470,6 +485,11 @@ class filter_rtmp extends moodle_text_filter {
         $this->videoclass = get_config('media_videojs', 'videocssclass');
         if (preg_match('/(\svideo-js|video-js\s|\bvideo-js\b)/i', $this->videoclass) !== 1) {
             $this->videoclass .= ' video-js';
+            set_config('videocssclass', $this->videoclass, 'media_videojs');
+        }
+        
+        if ($this->limitsize != 1 && preg_match('/(\svjs-16-9|vjs-16-9\s|\bvjs-16-9\b)/i', $this->videoclass) !== 1) {
+            $this->videoclass .= ' vjs-16-9';
             set_config('videocssclass', $this->videoclass, 'media_videojs');
         }
 
@@ -671,7 +691,7 @@ class filter_rtmp extends moodle_text_filter {
             if (stripos($matches[$i], '<video') !== false) {
                 preg_match('/(id_[^"]*)/i', $matches[$i], $mediaid);
                 $matches[$i] = preg_replace('/(id="[^"]*)/i', 'id="' . $mediaid[0] . '-video-playlist', $matches[$i]);
-                $matches[$i] = str_replace('class="', 'class="video-playlist vjs-default-skin ', $matches[$i]);
+                $matches[$i] = str_replace('class="', 'class="video-playlist ', $matches[$i]);
             }
 
             // Format <audio tag to <video for playlists (works better for playlist).
@@ -681,7 +701,7 @@ class filter_rtmp extends moodle_text_filter {
                 preg_match('/(id_[^"]*)/i', $matches[$i], $mediaid);
                 $matches[$i] = str_replace('<audio', '<video', $matches[$i]);
                 $matches[$i] = preg_replace('/(id="[^"]*)/i', 'id="' . $mediaid[0] . '-video-playlist', $matches[$i]);
-                $matches[$i] = str_replace('class="', 'class="video-playlist vjs-default-skin ', $matches[$i]);
+                $matches[$i] = str_replace('class="', 'class="video-playlist ', $matches[$i]);
                 $matches[$i] = str_replace($this->audiodatasetup, $this->videodatasetup, $matches[$i]);
             }
 
@@ -728,11 +748,20 @@ class filter_rtmp extends moodle_text_filter {
                 if ($playlisttracks) {
                     // Use </video> instead of </audio>.
                     // Move ending </div>s after </video> closing tag.
+                    $playlistcode = '</video></div>';
+                    $playlistwidth = '100%';
+
+                    // If limit size config is enabled, there will be additional wrapping <div> for width.
+                    if ($this->limitsize == 1) {
+                        $playlistcode .= '</div>';
+                        $playlistwidth = $this->defaultwidth . 'px';
+                    }
+
                     // Add start of <div> for playlist list.
                     // Need ID from element to concat before id=video-playlist.
-                    $playlistcode = '</video></div></div><div id="'
+                    $playlistcode .= '<div id="'
                             . $mediaid[0] . '-video-playlist-vjs-playlist" class="vjs-playlist" style="max-width:'
-                            . $this->defaultwidth . 'px"><ul>';
+                            . $playlistwidth . '"><ul>';
 
                     // Convert sources to li elements; include playlist name.
                     for ($m = 0; $m < count($playlisttracks); $m++) {
