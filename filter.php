@@ -138,19 +138,27 @@ class filter_rtmp extends moodle_text_filter {
         }
 
         $videotag = '';
-        $maxwidth = array();
+        $dimensions = array();
 
         // Format <video, <audio and <source tags.
         for ($i = 0; $i < count($matches); $i++) {
-            if (preg_match('/(max-width:)(\d*)px/i', $matches[$i], $maxwidth) === 1) {
-                // Change outer div style if width set for individual video display options.
-                if ($maxwidth[2] != $this->defaultwidth) {
-                    $this->videodatasetup = str_replace($this->defaultwidth, $maxwidth[2], $this->videodatasetup);
-                    $this->defaultwidth = $maxwidth[2];
+            // Change outer div style max-width if set for individiual video.
+            if (preg_match('/max-width:(\d*)px/i', $matches[$i], $dimensions) === 1) {
+                if ($dimensions[1] != $this->defaultwidth) {
+                    $this->videodatasetup = str_replace($this->defaultwidth, $dimensions[1], $this->videodatasetup);
+                    $this->defaultwidth = $dimensions[1];
                 }
             }
 
+            // Change video with and height data-setup config if set for individiual video.
             if (stripos($matches[$i], '<video') !== false) {
+                if (preg_match('/width="(\d*)" height="(\d*)"/i', $matches[$i], $dimensions) === 1) {
+                    $this->videodatasetup = str_replace($this->defaultwidth, $dimensions[1], $this->videodatasetup);
+                    $this->videodatasetup = str_replace($this->defaultheight, $dimensions[2], $this->videodatasetup);
+                    $this->defaultwidth = $dimensions[1];
+                    $this->defaultheight = $dimensions[2];
+                }
+
                 // Store video tag code to test for MIME type in child <source.
                 $videotag = self::format_video($matches[$i]);
                 $matches[$i] = $videotag;
@@ -168,7 +176,7 @@ class filter_rtmp extends moodle_text_filter {
 
                     // If HLS fallback is set, add iOS source.
                     $hlssource = '';
-                    if ($this->hlsfallback && stripos($videotag, '.flv') === false) {
+                    if ($this->hlsfallback && stripos($matches[$i], '.flv') === false) {
                         // FLV is not supported by iOS.
                         $hlssource = self::get_hls_source($matches[$i]);
                         $matches[$i] .= $hlssource;
@@ -631,6 +639,7 @@ class filter_rtmp extends moodle_text_filter {
         }
 
         // Format HLS .flv src URL with mp4 MIME type and corresponding server format.
+        // Only included for use in formatting closed caption track source later.
         if (stripos($hlssource, '.flv') !== false) {
             $hlssource = str_replace('flv:', 'mp4:', $hlssource);
             $hlssource = str_replace('.flv', '.flv' . $this->hlsurl, $hlssource);
