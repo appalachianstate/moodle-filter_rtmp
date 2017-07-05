@@ -686,7 +686,7 @@ class filter_rtmp extends moodle_text_filter {
         }
 
         // If Adobe FMS, add vtt subdirectory to src.
-        if (stripos($captionfile, 'playlist.m3u8') === false) {
+        if (stripos($this->hlsurl, 'playlist.m3u8') === false) {
             $filename = array();
             if (preg_match('/\/[^\/]*\.vtt$/i', $captionfile, $filename)) {
                 $captionfile = preg_replace('/\/[^\/]*\.vtt$/i', '/vtt' . $filename[0], $captionfile);
