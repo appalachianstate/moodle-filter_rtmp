@@ -137,14 +137,19 @@ class filter_rtmp extends moodle_text_filter {
             return $text;
         }
 
-        $videotag = '';
+        $mediatag = '';
         $dimensions = array();
 
-        // Format <video, <audio and <source tags.
+        // Format <video, <audio and <source code.
         for ($i = 0; $i < count($matches); $i++) {
-            // Change outer div style max-width if set for individiual video.
             if (preg_match('/max-width:(\d*)px/i', $matches[$i], $dimensions) === 1) {
-                if ($dimensions[1] != $this->defaultwidth) {
+                // If limit size is not enabled, set outer div to maximum width.
+                if ($this->limitsize != 1) {
+                    $matches[$i] = preg_replace('/max-width:(\d*)px/i', 'max-width:100%', $matches[$i]);
+                }
+
+                // Set individual video or audio dimensions if configured and limit size is enabled.
+                if ($this->limitsize == 1 && $dimensions[1] != $this->defaultwidth) {
                     $this->videodatasetup = str_replace($this->defaultwidth, $dimensions[1], $this->videodatasetup);
                     $this->defaultwidth = $dimensions[1];
                 }
@@ -159,13 +164,15 @@ class filter_rtmp extends moodle_text_filter {
                     $this->defaultheight = $dimensions[2];
                 }
 
-                // Store video tag code to test for MIME type in child <source.
-                $videotag = self::format_video($matches[$i]);
-                $matches[$i] = $videotag;
+                // Store <video code to let child <source know if <track should be added (video player).
+                $mediatag = self::format_video($matches[$i]);
+                $matches[$i] = $mediatag;
             }
 
             if (stripos($matches[$i], '<audio') !== false) {
-                $matches[$i] = self::format_audio($matches[$i]);
+                // Store <audio code to let child <source know if <track should be added (playlist - video player).
+                $mediatag = self::format_audio($matches[$i]);
+                $matches[$i] = $mediatag;
             }
 
             if (stripos($matches[$i], '<source') !== false) {
@@ -175,27 +182,24 @@ class filter_rtmp extends moodle_text_filter {
                     $matches[$i] = self::format_url($matches[$i]);
 
                     // If HLS fallback is set, add iOS source.
-                    $hlssource = '';
+                    $hlssource = self::get_hls_source($matches[$i]);
                     if ($this->hlsfallback && stripos($matches[$i], '.flv') === false) {
                         // FLV is not supported by iOS.
-                        $hlssource = self::get_hls_source($matches[$i]);
                         $matches[$i] .= $hlssource;
                     }
 
-                    // If closed captions on by default is set and parent is video tag, add track code for captions.
-                    if ($this->defaultcc && stripos($videotag, '<video') !== false) {
+                    // If closed captions on by default is set and parent is <video tag, add track code for captions.
+                    if ($this->defaultcc && (stripos($mediatag, '<video') !== false || stripos($mediatag, 'playlist') !== false)) {
                         // Use HLS source as base for track code filtering.
-                        if ($hlssource == '') {
-                            $hlssource = self::get_hls_source($matches[$i]);
-                        }
                         $trackcode = self::get_captions($hlssource);
                         $matches[$i] .= $trackcode;
                     }
                 }
             }
 
-            if (stripos($matches[$i], '</video') !== false) {
-                $videotag = '';
+            // Reset $mediatag for next video or audio code.
+            if (stripos($matches[$i], '</video') !== false || stripos($matches[$i], '</audio') !== false) {
+                $mediatag = '';
             }
         }
 
@@ -311,7 +315,7 @@ class filter_rtmp extends moodle_text_filter {
                             $title = $options['PLAYLIST_NAMES'][$j];
                         }
 
-                        // Add a title attribute to the source tag with the name, so it can be displayed later.
+                        // Add a title attribute to the <source code with the name, so it can be displayed later.
                         $sources[$i] = str_replace('" />', '" title="' . $title . '" />', $sources[$i]);
                         $j++;
                     }
@@ -521,7 +525,7 @@ class filter_rtmp extends moodle_text_filter {
             set_config('audiocssclass', $this->audioclass, 'media_videojs');
         }
 
-        // If limit size is not enabled and VideoJS responsive class has not already been added, add it.
+        // Add VideoJS responsive class if it has not already been added and limit size is not enabled (creates maximum width player).
         if ($this->limitsize != 1 && preg_match('/(\svjs-16-9|vjs-16-9\s|\bvjs-16-9\b)/i', $this->videoclass) !== 1) {
             $this->videoclass .= ' vjs-16-9';
             set_config('videocssclass', $this->videoclass, 'media_videojs');
@@ -529,12 +533,12 @@ class filter_rtmp extends moodle_text_filter {
     }
 
     /**
-     * Format video tag for VideoJS RTMP.
+     * Format video code for VideoJS RTMP.
      *
      * @access private
      *
      * @param string $match
-     * @return string video tag
+     * @return string video code
      */
     private function format_video($match) {
         // Add crossorigin config. Adjust data-setup config.
@@ -543,12 +547,12 @@ class filter_rtmp extends moodle_text_filter {
     }
 
     /**
-     * Format audio tag for VideoJS RTMP.
+     * Format audio code for VideoJS RTMP.
      *
      * @access private
      *
      * @param string $match
-     * @return string audio tag
+     * @return string audio code
      */
     private function format_audio($match) {
         // Add crossorigin config. Adjust data-setup config.
@@ -574,16 +578,19 @@ class filter_rtmp extends moodle_text_filter {
         // Changes MIME type to rtmp.
         $pattern = '/([^\/]*)\/\/([^\/]*)\/([^\/]*)\//i';
         $spliturl = array();
+
         if (stripos($source, '.mp4') !== false || stripos($source, '.f4v') !== false) {
             preg_match($pattern, $source, $spliturl);
             $source = preg_replace($pattern, $spliturl[0] . '&mp4:', $source);
             $source = str_replace('type="video/', 'type="rtmp/', $source);
         }
+
         if (stripos($source, '.flv') !== false) {
             preg_match($pattern, $source, $spliturl);
             $source = preg_replace($pattern, $spliturl[0] . '&flv:', $source);
             $source = str_replace('type="video/', 'type="rtmp/', $source);
         }
+
         if (stripos($source, '.mp3') !== false) {
             preg_match($pattern, $source, $spliturl);
             $source = preg_replace($pattern, $spliturl[0] . '&mp3:', $source);
@@ -681,14 +688,17 @@ class filter_rtmp extends moodle_text_filter {
             $captionfile = preg_replace('/(\.mp4[^>]*>)/i', '.vtt', $captionfile);
             $captionfile = str_replace('mp4:', '', $captionfile);
         }
+
         if (stripos($captionfile, '.flv') !== false) {
             $captionfile = preg_replace('/(\.flv[^>]*>)/i', '.vtt', $captionfile);
             $captionfile = str_replace('mp4:', '', $captionfile);
         }
+
         if (stripos($captionfile, '.f4v') !== false) {
             $captionfile = preg_replace('/(\.f4v[^>]*>)/i', '.vtt', $captionfile);
             $captionfile = str_replace('mp4:', '', $captionfile);
         }
+
         if (stripos($captionfile, '.mp3') !== false) {
             $captionfile = preg_replace('/(\.mp3[^>]*>)/i', '.vtt', $captionfile);
             $captionfile = str_replace('mp3:', '', $captionfile);
@@ -738,14 +748,14 @@ class filter_rtmp extends moodle_text_filter {
         $tracks = 0;
 
         for ($i = 0, $j = 0; $i < count($matches); $i++) {
-            // Format video tag to append '-video-playlist' to id, add playlist and HLS classes.
+            // Format <video code to append '-video-playlist' to id, add playlist and HLS classes.
             if (stripos($matches[$i], '<video') !== false) {
                 preg_match('/(id_[^"]*)/i', $matches[$i], $mediaid);
                 $matches[$i] = preg_replace('/(id="[^"]*)/i', 'id="' . $mediaid[0] . '-video-playlist', $matches[$i]);
                 $matches[$i] = str_replace('class="', 'class="video-playlist ', $matches[$i]);
             }
 
-            // Format <audio tag to <video for playlists (works better for playlist).
+            // Format <audio code to <video for playlists (works better for playlist).
             // Append '-video-playlist' to id, add playlist and HLS classes.
             // Change data-setup to match <video settings.
             if (stripos($matches[$i], '<audio') !== false) {
@@ -756,7 +766,7 @@ class filter_rtmp extends moodle_text_filter {
                 $matches[$i] = str_replace($this->audiodatasetup, $this->videodatasetup, $matches[$i]);
             }
 
-            // Move valid sources (not iOS fallback) from video tag to playlist div/ul.
+            // Move valid sources (not iOS fallback) from <video code to playlist div/ul.
             if (stripos($matches[$i], '<source') !== false) {
                 // Only process source if it is enabled media type.
                 if (($this->enablevideo && preg_match('(.mp4|.flv|.f4v)', $matches[$i]) === 1)

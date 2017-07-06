@@ -72,10 +72,10 @@ define(['media_videojs/video-lazy'], function(videojs) {
                             vtt = vtt.replace(".mp4", ".vtt");
                             if (args.hlsurl.indexOf("playlist") != -1) {
                                 // Wowza HLS URL format.
-                                vtt = vtt.replace("&", "_definst_/");
+                                vtt = vtt.replace("&mp4:", "_definst_/");
                             } else {
                                 // Adobe FMS HLS URL format.
-                                vtt = vtt.replace("&", "");
+                                vtt = vtt.replace("&mp4:", "");
                                 var regex = /(\/[^\/]*\.vtt$)/i;
                                 vtt = vtt.replace(regex, "/vtt$1");
                             }
@@ -95,10 +95,10 @@ define(['media_videojs/video-lazy'], function(videojs) {
                             vtt = vtt.replace(".flv", ".vtt");
                             if (args.hlsurl.indexOf("playlist") != -1) {
                                 // Wowza HLS URL format.
-                                vtt = vtt.replace("&", "_definst_/");
+                                vtt = vtt.replace("&flv:", "_definst_/");
                             } else {
                                 // Adobe FMS HLS URL format.
-                                vtt = vtt.replace("&", "");
+                                vtt = vtt.replace("&flv:", "");
                                 var regex = /(\/[^\/]*\.vtt$)/i;
                                 vtt = vtt.replace(regex, "/vtt$1");
                             }
@@ -135,10 +135,10 @@ define(['media_videojs/video-lazy'], function(videojs) {
                             vtt = vtt.replace(".f4v", ".vtt");
                             if (args.hlsurl.indexOf("playlist") != -1) {
                                 // Wowza HLS URL format.
-                                vtt = vtt.replace("&", "_definst_/");
+                                vtt = vtt.replace("&mp4:", "_definst_/");
                             } else {
                                 // Adobe FMS HLS URL format.
-                                vtt = vtt.replace("&", "");
+                                vtt = vtt.replace("&mp4:", "");
                                 var regex = /(\/[^\/]*\.vtt$)/i;
                                 vtt = vtt.replace(regex, "/vtt$1");
                             }
@@ -175,10 +175,10 @@ define(['media_videojs/video-lazy'], function(videojs) {
                             vtt = vtt.replace(".mp3", ".vtt");
                             if (args.hlsurl.indexOf("playlist") != -1) {
                                 // Wowza HLS URL format.
-                                vtt = vtt.replace("&", "_definst_/");
+                                vtt = vtt.replace("&mp3:", "_definst_/");
                             } else {
                                 // Adobe FMS HLS URL format.
-                                vtt = vtt.replace("&", "");
+                                vtt = vtt.replace("&mp3:", "");
                                 var regex = /(\/[^\/]*\.vtt$)/i;
                                 vtt = vtt.replace(regex, "/vtt$1");
                             }
