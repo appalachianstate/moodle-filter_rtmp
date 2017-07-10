@@ -460,13 +460,13 @@ class filter_rtmp extends moodle_text_filter {
         // Add width setting.
         // Add height setting.
         // Add "techOrder": "flash", "html5" (set priority for Flash and HTML5 playback; required for RTMP).
-        $this->videodatasetup = 'data-setup="{&quot;language&quot;: &quot;en&quot;, '
+        $this->videodatasetup = 'data-setup-lazy="{&quot;language&quot;: &quot;en&quot;, '
             . '&quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}"';
 
         // Set VideoJS audio data-setup values.
         // Add width setting.
         // Add "techOrder": "flash", "html5" (set priority for Flash and HTML5 playback; required for RTMP).
-        $this->audiodatasetup = 'data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true, '
+        $this->audiodatasetup = 'data-setup-lazy="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true, '
             . '&quot;controlBar&quot;: {&quot;fullscreenToggle&quot;: false}, &quot;aspectRatio&quot;: &quot;1:0&quot;, '
             . '&quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}"';
 
@@ -543,13 +543,7 @@ class filter_rtmp extends moodle_text_filter {
     private function format_video($match) {
         // Add crossorigin config. Adjust data-setup config.
         $replacement = 'crossorigin="anonymous" ' . $this->videodatasetup;
-
-        // Moodle 3.2.4 changed to data-setup-lazy which does not work with RTMP.
-        if (preg_match('/(data-setup-lazy="[^"]*")/i', $match) == 1) {
-            return preg_replace('/(data-setup-lazy="[^"]*")/i', $replacement, $match);
-        }
-
-        return preg_replace('/(data-setup="[^"]*")/i', $replacement, $match);
+        return preg_replace('/(data-setup-lazy="[^"]*")/i', $replacement, $match);
     }
 
     /**
@@ -563,13 +557,7 @@ class filter_rtmp extends moodle_text_filter {
     private function format_audio($match) {
         // Add crossorigin config. Adjust data-setup config.
         $replacement = 'crossorigin="anonymous" ' . $this->audiodatasetup;
-
-        // Moodle 3.2.4 changed to data-setup-lazy which does not work with RTMP.
-        if (preg_match('/(data-setup-lazy="[^"]*")/i', $match) == 1) {
-            return preg_replace('/(data-setup-lazy="[^"]*")/i', $replacement, $match);
-        }
-
-        return preg_replace('/(data-setup="[^"]*")/i', $replacement, $match);
+        return preg_replace('/(data-setup-lazy="[^"]*")/i', $replacement, $match);
     }
 
     /**
