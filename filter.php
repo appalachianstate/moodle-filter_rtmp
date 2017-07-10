@@ -543,6 +543,12 @@ class filter_rtmp extends moodle_text_filter {
     private function format_video($match) {
         // Add crossorigin config. Adjust data-setup config.
         $replacement = 'crossorigin="anonymous" ' . $this->videodatasetup;
+
+        // Moodle 3.2.4 changed to data-setup-lazy which does not work with RTMP.
+        if (preg_match('/(data-setup-lazy="[^"]*")/i', $match) == 1) {
+            return preg_replace('/(data-setup-lazy="[^"]*")/i', $replacement, $match);
+        }
+
         return preg_replace('/(data-setup="[^"]*")/i', $replacement, $match);
     }
 
@@ -557,6 +563,12 @@ class filter_rtmp extends moodle_text_filter {
     private function format_audio($match) {
         // Add crossorigin config. Adjust data-setup config.
         $replacement = 'crossorigin="anonymous" ' . $this->audiodatasetup;
+
+        // Moodle 3.2.4 changed to data-setup-lazy which does not work with RTMP.
+        if (preg_match('/(data-setup-lazy="[^"]*")/i', $match) == 1) {
+            return preg_replace('/(data-setup-lazy="[^"]*")/i', $replacement, $match);
+        }
+
         return preg_replace('/(data-setup="[^"]*")/i', $replacement, $match);
     }
 
