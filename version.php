@@ -28,9 +28,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2017071000;       // The current plugin version (Date: YYYYMMDDXX).
-$plugin->requires  = 2016120502.00;    // Requires this Moodle version.
+$plugin->version   = 2017071100;       // The current plugin version (Date: YYYYMMDDXX).
+$plugin->requires  = 2016120504.00;    // Requires this Moodle version.
 $plugin->cron      = 0;
 $plugin->component = 'filter_rtmp';    // Full name of the plugin (used for diagnostics).
 $plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.9 (Build: 2017071000)';
+$plugin->release   = '2.0 (Build: 2017071100)';
