@@ -749,21 +749,25 @@ class filter_rtmp extends moodle_text_filter {
 
         for ($i = 0, $j = 0; $i < count($matches); $i++) {
             // Format <video code to append '-video-playlist' to id, add playlist and HLS classes.
+            // Change Moodle 3.2.4 update to data-setup-lazy to VideoJS data-setup for playlist to work.
             if (stripos($matches[$i], '<video') !== false) {
                 preg_match('/(id_[^"]*)/i', $matches[$i], $mediaid);
                 $matches[$i] = preg_replace('/(id="[^"]*)/i', 'id="' . $mediaid[0] . '-video-playlist', $matches[$i]);
                 $matches[$i] = str_replace('class="', 'class="video-playlist ', $matches[$i]);
+                $matches[$i] = str_replace('data-setup-lazy', 'data-setup', $matches[$i]);
             }
 
             // Format <audio code to <video for playlists (works better for playlist).
             // Append '-video-playlist' to id, add playlist and HLS classes.
             // Change data-setup to match <video settings.
+            // Change Moodle 3.2.4 update to data-setup-lazy to VideoJS data-setup for playlist to work.
             if (stripos($matches[$i], '<audio') !== false) {
                 preg_match('/(id_[^"]*)/i', $matches[$i], $mediaid);
                 $matches[$i] = str_replace('<audio', '<video', $matches[$i]);
                 $matches[$i] = preg_replace('/(id="[^"]*)/i', 'id="' . $mediaid[0] . '-video-playlist', $matches[$i]);
                 $matches[$i] = str_replace('class="', 'class="video-playlist ', $matches[$i]);
                 $matches[$i] = str_replace($this->audiodatasetup, $this->videodatasetup, $matches[$i]);
+                $matches[$i] = str_replace('data-setup-lazy', 'data-setup', $matches[$i]);
             }
 
             // Move valid sources (not iOS fallback) from <video code to playlist div/ul.
