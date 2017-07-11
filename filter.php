@@ -82,7 +82,7 @@ class filter_rtmp extends moodle_text_filter {
      * @see moodle_text_filter::filter()
      */
     public function filter($text, array $options = array()) {
-        global $CFG;
+        global $CFG, $PAGE;
 
         if (!is_string($text) or empty($text)) {
             // Non string data can not be filtered anyway.
@@ -98,6 +98,9 @@ class filter_rtmp extends moodle_text_filter {
             // If there are no rtmp sources, do nothing.
             return $text;
         }
+
+        // Moodle 3.2.4 changed VideoJS calls so we have to call manually so we can use data-setup instead of data-setup-lazy.
+        $PAGE->requires->js_call_amd('media_videojs/loader', 'onload');
 
         // Check SWF permissions.
         $this->trusted = !empty($options['noclean']) or !empty($CFG->allowobjectembed);
@@ -460,13 +463,13 @@ class filter_rtmp extends moodle_text_filter {
         // Add width setting.
         // Add height setting.
         // Add "techOrder": "flash", "html5" (set priority for Flash and HTML5 playback; required for RTMP).
-        $this->videodatasetup = 'data-setup-lazy="{&quot;language&quot;: &quot;en&quot;, '
+        $this->videodatasetup = 'data-setup="{&quot;language&quot;: &quot;en&quot;, '
             . '&quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}"';
 
         // Set VideoJS audio data-setup values.
         // Add width setting.
         // Add "techOrder": "flash", "html5" (set priority for Flash and HTML5 playback; required for RTMP).
-        $this->audiodatasetup = 'data-setup-lazy="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true, '
+        $this->audiodatasetup = 'data-setup="{&quot;language&quot;: &quot;en&quot;, &quot;fluid&quot;: true, '
             . '&quot;controlBar&quot;: {&quot;fullscreenToggle&quot;: false}, &quot;aspectRatio&quot;: &quot;1:0&quot;, '
             . '&quot;techOrder&quot;: [&quot;flash&quot;, &quot;html5&quot;]}"';
 
@@ -749,25 +752,21 @@ class filter_rtmp extends moodle_text_filter {
 
         for ($i = 0, $j = 0; $i < count($matches); $i++) {
             // Format <video code to append '-video-playlist' to id, add playlist and HLS classes.
-            // Change Moodle 3.2.4 update to data-setup-lazy to VideoJS data-setup for playlist to work.
             if (stripos($matches[$i], '<video') !== false) {
                 preg_match('/(id_[^"]*)/i', $matches[$i], $mediaid);
                 $matches[$i] = preg_replace('/(id="[^"]*)/i', 'id="' . $mediaid[0] . '-video-playlist', $matches[$i]);
                 $matches[$i] = str_replace('class="', 'class="video-playlist ', $matches[$i]);
-                $matches[$i] = str_replace('data-setup-lazy', 'data-setup', $matches[$i]);
             }
 
             // Format <audio code to <video for playlists (works better for playlist).
             // Append '-video-playlist' to id, add playlist and HLS classes.
             // Change data-setup to match <video settings.
-            // Change Moodle 3.2.4 update to data-setup-lazy to VideoJS data-setup for playlist to work.
             if (stripos($matches[$i], '<audio') !== false) {
                 preg_match('/(id_[^"]*)/i', $matches[$i], $mediaid);
                 $matches[$i] = str_replace('<audio', '<video', $matches[$i]);
                 $matches[$i] = preg_replace('/(id="[^"]*)/i', 'id="' . $mediaid[0] . '-video-playlist', $matches[$i]);
                 $matches[$i] = str_replace('class="', 'class="video-playlist ', $matches[$i]);
                 $matches[$i] = str_replace($this->audiodatasetup, $this->videodatasetup, $matches[$i]);
-                $matches[$i] = str_replace('data-setup-lazy', 'data-setup', $matches[$i]);
             }
 
             // Move valid sources (not iOS fallback) from <video code to playlist div/ul.
