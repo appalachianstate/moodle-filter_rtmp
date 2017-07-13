@@ -74,7 +74,7 @@ class filter_rtmp extends moodle_text_filter {
 
     /** @var string audio css classes */
     private $audioclass;
-    
+
     /** @var boolean data-setup-lazy designation */
     private static $lazy = true;
 
@@ -152,7 +152,7 @@ class filter_rtmp extends moodle_text_filter {
                 if ($this->limitsize != 1) {
                     $mediaelements[$i] = preg_replace('/max-width:(\d*)px/i', 'max-width:100%', $mediaelements[$i]);
                 }
-                
+
                 // Set individual video or audio dimensions if configured and limit size is enabled.
                 if ($this->limitsize == 1 && $dimensions[1] != $this->defaultwidth) {
                     $this->videodatasetup = str_replace($this->defaultwidth, $dimensions[1], $this->videodatasetup);
@@ -165,7 +165,7 @@ class filter_rtmp extends moodle_text_filter {
                 // Split current $mediaelement into <video, <audio, and <source elements.
                 $matches = preg_split('/(<video[^>]*>)|(<audio[^>]*>)|(<source[^>]*>)/i', $mediaelements[$i],
                         -1, PREG_SPLIT_NO_EMPTY | PREG_SPLIT_DELIM_CAPTURE);
-                
+
                 // Format <video, <audio, and <source elements.
                 for ($j = 0; $j < count($matches); $j++) {
                     if (stripos($matches[$j], '<video') !== false) {
@@ -176,50 +176,50 @@ class filter_rtmp extends moodle_text_filter {
                             $this->defaultwidth = $dimensions[1];
                             $this->defaultheight = $dimensions[2];
                         }
-                        
+
                         // Set up to use VideoJS data-setup for playlists (not lazy for Moodle 3.2.4).
                         if (stripos($matches[$j], 'playlist') !== false) {
                             self::$lazy = false;
                         }
-                        
+
                         // Store <video code to let child <source know if <track should be added (video player).
                         $mediatag = self::format_video($matches[$j]);
                         $matches[$j] = $mediatag;
                     }
-                    
+
                     if (stripos($matches[$j], '<audio') !== false) {
                         // Set up to use VideoJS data-setup for playlists (not lazy for Moodle 3.2.4).
                         if (stripos($matches[$j], 'playlist') !== false) {
                             self::$lazy = false;
                         }
-                        
+
                         // Store <audio code to let child <source know if <track should be added (playlist - video player).
                         $mediatag = self::format_audio($matches[$j]);
                         $matches[$j] = $mediatag;
                     }
-                    
+
                     if (stripos($matches[$j], '<source') !== false) {
                         if (($this->enablevideo && preg_match('/(.mp4|.flv|.f4v)/i', $matches[$j]) === 1)
                                 || ($this->enableaudio && preg_match('(.mp3)', $matches[$j]) === 1)) {
-                                    // Format RTMP URL for VideoJS - add & and MIME type.
-                                    $matches[$j] = self::format_url($matches[$j]);
-                                    
-                                    // If HLS fallback is set, add iOS source.
-                                    $hlssource = self::get_hls_source($matches[$j]);
-                                    if ($this->hlsfallback && stripos($matches[$j], '.flv') === false) {
-                                        // FLV is not supported by iOS.
-                                        $matches[$j] .= $hlssource;
-                                    }
-                                    
-                                    // If closed captions on by default is set and parent is <video tag, add track code for captions.
-                                    if ($this->defaultcc && (stripos($mediatag, '<video') !== false || stripos($mediatag, 'playlist') !== false)) {
-                                        // Use HLS source as base for track code filtering.
-                                        $trackcode = self::get_captions($hlssource);
-                                        $matches[$j] .= $trackcode;
-                                    }
-                                }
+                            // Format RTMP URL for VideoJS - add & and MIME type.
+                            $matches[$j] = self::format_url($matches[$j]);
+
+                            // If HLS fallback is set, add iOS source.
+                            $hlssource = self::get_hls_source($matches[$j]);
+                            if ($this->hlsfallback && stripos($matches[$j], '.flv') === false) {
+                                // FLV is not supported by iOS.
+                                $matches[$j] .= $hlssource;
+                            }
+
+                            // If closed captions on by default is set and parent is <video tag, add track code for captions.
+                            if ($this->defaultcc && (stripos($mediatag, '<video') !== false || stripos($mediatag, 'playlist') !== false)) {
+                                // Use HLS source as base for track code filtering.
+                                $trackcode = self::get_captions($hlssource);
+                                $matches[$j] .= $trackcode;
+                            }
+                        }
                     }
-                    
+
                     // Reset $mediatag for next video or audio code.
                     if (stripos($matches[$j], '</video') !== false || stripos($matches[$j], '</audio') !== false) {
                         $mediatag = '';
@@ -815,16 +815,16 @@ class filter_rtmp extends moodle_text_filter {
             // Move valid sources (not iOS fallback) from <video element to playlist div/ul.
             if (stripos($matches[$i], '<source') !== false) {
                 // Only process source if it is enabled media type.
-                if (($this->enablevideo && preg_match('(.mp4|.flv|.f4v)', $matches[$i]) === 1) 
+                if (($this->enablevideo && preg_match('(.mp4|.flv|.f4v)', $matches[$i]) === 1)
                         || ($this->enableaudio && preg_match('(.mp3)', $matches[$i]) === 1)) {
-                            // Keep count of sources so first file can be embedded in playlist player.
-                            $sources++;
-        
-                            // Only process source if it is not iOS source - these will be added with playlist JS.
-                            if (stripos($matches[$i], '.m3u8') === false) {
-                                $playlisttracks[$j] = $matches[$i];
-                                $j++;
-                            }
+                    // Keep count of sources so first file can be embedded in playlist player.
+                    $sources++;
+
+                    // Only process source if it is not iOS source - these will be added with playlist JS.
+                    if (stripos($matches[$i], '.m3u8') === false) {
+                        $playlisttracks[$j] = $matches[$i];
+                        $j++;
+                    }
                 }
 
                 // Keep first source and related resources for intial playlist player.
