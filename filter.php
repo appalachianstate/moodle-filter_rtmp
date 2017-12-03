@@ -111,24 +111,9 @@ class filter_rtmp extends moodle_text_filter {
         // (It could do all links, but the embeddable markers thing should make
         // it faster by meaning for most links it doesn't drop into PHP code).
         if (stripos($text, '</a>')) {
-            // Get embed markers from RTMP filter settings.
-            $embedmarkers = " ";
-
-            if ($this->enableaudio) {
-                $embedmarkers .= "|\.mp3";
-            }
-
-            if ($this->enablevideo) {
-                $embedmarkers .= "|\.flv|\.mp4|\.f4v";
-            }
-
-            // Regex gets string from starting <a tag to closing </a> tag for rtmp single video/audio and playlist links.
-            $regex = '~<a\s[^>]*href="(rtmp:\/\/(?:playlist=[^"]*|[^"]*(?:' . $embedmarkers . '))[^"]*)"[^>]*>([^>]*)</a>~is';
+            // Regex gets string from starting <a tag to closing </a> tag for rtmp playlist links.
+            $regex = '~<a\s[^>]*href="(rtmp:\/\/(?:playlist=[^"]*))">([^>]*)</a>~is';
             $newtext = preg_replace_callback($regex, array($this, 'callback'), $text);
-
-            if ($newtext == $text || is_null($text)) {
-                return $text;
-            }
 
             // Set changed text to text, so filter can continue work on modifiled <a tags or already set <video or <audio tags.
             $text = $newtext;
