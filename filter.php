@@ -75,9 +75,6 @@ class filter_rtmp extends moodle_text_filter {
     /** @var string audio css classes */
     private $audioclass;
 
-    /** @var boolean data-setup-lazy designation */
-    private static $lazy = true;
-
     /**
      * Filter media player code to update for RTMP
      *
@@ -162,22 +159,12 @@ class filter_rtmp extends moodle_text_filter {
                             $this->defaultheight = $dimensions[2];
                         }
 
-                        // Set up to use VideoJS data-setup for playlists (not lazy for Moodle 3.2.4).
-                        if (stripos($matches[$j], 'playlist') !== false) {
-                            self::$lazy = false;
-                        }
-
                         // Store <video code to let child <source know if <track should be added (video player).
                         $mediatag = self::format_video($matches[$j]);
                         $matches[$j] = $mediatag;
                     }
 
                     if (stripos($matches[$j], '<audio') !== false) {
-                        // Set up to use VideoJS data-setup for playlists (not lazy for Moodle 3.2.4).
-                        if (stripos($matches[$j], 'playlist') !== false) {
-                            self::$lazy = false;
-                        }
-
                         // Store <audio code to let child <source know if <track should be added (playlist - video player).
                         $mediatag = self::format_audio($matches[$j]);
                         $matches[$j] = $mediatag;
@@ -558,11 +545,6 @@ class filter_rtmp extends moodle_text_filter {
      * @return string video code
      */
     private function format_video($match) {
-        // If not configured for Moodle 3.2.4 data-setup-lazy (playlist content), change to VideoJS data-setup.
-        if (!self::$lazy) {
-            $this->videodatasetup = str_replace('data-setup-lazy', 'data-setup', $this->videodatasetup);
-        }
-
         // Add crossorigin config. Adjust data-setup config.
         $replacement = 'crossorigin="anonymous" ' . $this->videodatasetup;
         return preg_replace('/(data-setup-lazy="[^"]*")/i', $replacement, $match);
@@ -577,11 +559,6 @@ class filter_rtmp extends moodle_text_filter {
      * @return string audio code
      */
     private function format_audio($match) {
-        // If not configured for Moodle 3.2.4 data-setup-lazy (playlist content), change to VideoJS data-setup.
-        if (!self::$lazy) {
-            $this->audiodatasetup = str_replace('data-setup-lazy', 'data-setup', $this->audiodatasetup);
-        }
-
         // Add crossorigin config. Adjust data-setup config.
         $replacement = 'crossorigin="anonymous" ' . $this->audiodatasetup;
         return preg_replace('/(data-setup-lazy="[^"]*")/i', $replacement, $match);
@@ -782,25 +759,21 @@ class filter_rtmp extends moodle_text_filter {
                 preg_match('/(id_[^"]*)/i', $matches[$i], $mediaid);
                 $matches[$i] = preg_replace('/(id="[^"]*)/i', 'id="' . $mediaid[0] . '-video-playlist', $matches[$i]);
                 $matches[$i] = str_replace('class="', 'class="video-playlist ', $matches[$i]);
-                preg_match('/(data-setup="[^"]*")/i', $matches[$i], $datasetup);
-                $datasetup[0] = str_replace('data-setup=', 'data-setup-lazy=', $datasetup[0]);
+                preg_match('/(data-setup-lazy="[^"]*")/i', $matches[$i], $datasetup);
+                $datasetup[0] = str_replace('data-setup-lazy=', 'data-setup=', $datasetup[0]);
                 $datasetup[0] = $datasetup[0] . " " . $datasetup[1];
-                $matches[$i] = preg_replace('/data-setup="[^"]*"/i', $datasetup[0], $matches[$i]);
+                $matches[$i] = preg_replace('/data-setup-lazy="[^"]*"/i', $datasetup[0], $matches[$i]);
             }
 
             // Format <audio element to <video for playlists (works better for playlist).
             // Append '-video-playlist' to id, add playlist and HLS classes.
             // Change data-setup to match <video settings.
-            // If not configured for Moodle 3.2.4 data-setup-lazy (playlist content), change to VideoJS data-setup.
             if (stripos($matches[$i], '<audio') !== false) {
                 preg_match('/(id_[^"]*)/i', $matches[$i], $mediaid);
                 $matches[$i] = str_replace('<audio', '<video', $matches[$i]);
                 $matches[$i] = preg_replace('/(id="[^"]*)/i', 'id="' . $mediaid[0] . '-video-playlist', $matches[$i]);
                 $matches[$i] = str_replace('class="', 'class="video-playlist ', $matches[$i]);
                 $matches[$i] = str_replace($this->audiodatasetup, $this->videodatasetup, $matches[$i]);
-                if (!self::$lazy) {
-                    $matches[$i] = str_replace('data-setup-lazy', 'data-setup', $matches[$i]);
-                }
             }
 
             // Move valid sources (not iOS fallback) from <video element to playlist div/ul.
