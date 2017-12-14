@@ -771,15 +771,21 @@ class filter_rtmp extends moodle_text_filter {
 
         $playlisttracks = array();
         $mediaid = array();
+        $datasetup = array();
         $sources = 0;
         $tracks = 0;
 
         for ($i = 0, $j = 0; $i < count($matches); $i++) {
             // Format <video element to append '-video-playlist' to id, add playlist and HLS classes.
+            // Duplicate data-setup-lazy with data-setup config for videojs_playlist.js to work.
             if (stripos($matches[$i], '<video') !== false) {
                 preg_match('/(id_[^"]*)/i', $matches[$i], $mediaid);
                 $matches[$i] = preg_replace('/(id="[^"]*)/i', 'id="' . $mediaid[0] . '-video-playlist', $matches[$i]);
                 $matches[$i] = str_replace('class="', 'class="video-playlist ', $matches[$i]);
+                preg_match('/(data-setup="[^"]*")/i', $matches[$i], $datasetup);
+                $datasetup[0] = str_replace('data-setup=', 'data-setup-lazy=', $datasetup[0]);
+                $datasetup[0] = $datasetup[0] . " " . $datasetup[1];
+                $matches[$i] = preg_replace('/data-setup="[^"]*"/i', $datasetup[0], $matches[$i]);
             }
 
             // Format <audio element to <video for playlists (works better for playlist).
